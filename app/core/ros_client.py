@@ -187,6 +187,69 @@ class RouterOSClient:
 
         return {"status": "success_live", "destination": dest.name}
 
+
+    def list_certificates(self) -> List[Dict[str, Any]]:
+        """Scans and lists existing certificates on the router"""
+        if self.is_mock:
+            return [
+                {"name": "server-template", "common_name": "server-template", "has_key": True, "invalid_after": "2036-10-12"},
+                {"name": "ca-authority", "common_name": "CA-Authority", "has_key": True, "invalid_after": "2036-10-12"}
+            ]
+        try:
+            cert_res = self._api.get_resource("/certificate").get()
+            results = []
+            for c in cert_res:
+                results.append({
+                    "name": c.get("name"),
+                    "common_name": c.get("common-name", c.get("name")),
+                    "has_key": "K" in c.get("flags", "") or c.get("private-key") == "true",
+                    "invalid_after": c.get("invalid-after", "Unknown")
+                })
+            return results
+        except Exception:
+            return []
+
+    def detect_existing_tunnels(self) -> List[Dict[str, Any]]:
+        """Scans existing GRE and L2TP-ether interfaces with their assigned IP addresses"""
+        if self.is_mock:
+            return [
+                {"name": "gre-ca", "type": "gre", "remote_ip": "67.55.2.40", "local_ip_30": "20.20.3.2/30", "gw_ip": "20.20.3.1", "configured": False},
+                {"name": "gre-to-germany", "type": "gre", "remote_ip": "91.99.129.82", "local_ip_30": "40.40.40.2/30", "gw_ip": "40.40.40.1", "configured": False},
+                {"name": "l2tp-milad", "type": "l2tp_ether", "remote_ip": "65.108.18.128", "local_ip_30": "10.10.2.2/30", "gw_ip": "10.10.2.1", "configured": False}
+            ]
+        detected = []
+        try:
+            # 1. GRE
+            for g in self._api.get_resource("/interface/gre").get():
+                name = g.get("name")
+                remote = g.get("remote-address")
+                # find ip
+                ips = self._api.get_resource("/ip/address").get(interface=name)
+                ip_addr = ips[0].get("address") if ips else ""
+                detected.append({
+                    "name": name,
+                    "type": "gre",
+                    "remote_ip": remote,
+                    "local_ip_30": ip_addr,
+                    "configured": False
+                })
+            # 2. L2TP Ethernet
+            for l in self._api.get_resource("/interface/l2tp-ether").get():
+                name = l.get("name")
+                remote = l.get("connect-to")
+                ips = self._api.get_resource("/ip/address").get(interface=name)
+                ip_addr = ips[0].get("address") if ips else ""
+                detected.append({
+                    "name": name,
+                    "type": "l2tp_ether",
+                    "remote_ip": remote,
+                    "local_ip_30": ip_addr,
+                    "configured": False
+                })
+        except Exception:
+            pass
+        return detected
+
     def generate_self_signed_cert(self, cert_name: str = "server-template", common_name: str = "server-template", days: int = 3650) -> Dict[str, Any]:
         commands = [
             f"/certificate add name=ca-authority common-name='CA-Authority' days-valid={days} key-size=2048 key-usage=crl-sign,key-cert-sign",
