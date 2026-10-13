@@ -361,6 +361,28 @@ async def wizard_step4_tunnel(req: Step4TunnelRequest):
             "commands": res.get("generated_commands", [])
         }
 
+
+class Step4BatchTunnelsRequest(BaseModel):
+    server_id: str
+    destinations: List[DestinationConfig]
+
+@app.post("/api/wizard/step4-batch-tunnels")
+async def wizard_step4_batch_tunnels(req: Step4BatchTunnelsRequest):
+    server = fleet_service.get_server(req.server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    all_cmds = []
+    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
+        for dest in req.destinations:
+            res = client.add_destination_atomic(dest)
+            all_cmds.extend(res.get("generated_commands", []))
+    return {
+        "success": True,
+        "count": len(req.destinations),
+        "message": f"تعداد {len(req.destinations)} تونل با پورت و پروتکل سفارشی با موفقیت اعمال شدند.",
+        "commands": all_cmds
+    }
+
 @app.get("/api/servers/{server_id}/certificates")
 async def get_server_certificates(server_id: str):
     server = fleet_service.get_server(server_id)
@@ -388,6 +410,7 @@ class AdoptTunnelRequest(BaseModel):
     client_gateway_ip: str
     client_subnet: str
     ovpn_port: int
+    ovpn_protocol: str = "udp"
 
 @app.post("/api/wizard/adopt-tunnel")
 async def wizard_adopt_existing_tunnel(req: AdoptTunnelRequest):
@@ -407,7 +430,7 @@ async def wizard_adopt_existing_tunnel(req: AdoptTunnelRequest):
         f"/ip route add dst-address=0.0.0.0/0 blackhole=yes distance=10 routing-table={table_name} comment='auto:killswitch-{req.country_code}'",
         f"/ip pool add name={pool_name} ranges={req.client_pool_range}",
         f"/ppp profile add name={profile_name} local-address={req.client_gateway_ip} remote-address={pool_name} dns-server=8.8.8.8,8.8.4.4 change-tcp-mss=yes use-encryption=required",
-        f"/interface ovpn-server server add name={ovpn_server_name} port={req.ovpn_port} protocol=udp default-profile={profile_name} certificate=server-template cipher=aes128-gcm,aes256-gcm redirect-gateway=def1 disabled=no",
+        f"/interface ovpn-server server add name={ovpn_server_name} port={req.ovpn_port} protocol={req.ovpn_protocol} default-profile={profile_name} certificate=server-template cipher=aes128-gcm,aes256-gcm redirect-gateway=def1 disabled=no",
         f"/ip firewall mangle add chain=prerouting action=mark-routing new-routing-mark={table_name} src-address={req.client_subnet} dst-address-list=!IRAN comment='auto:route-{req.country_code}'"
     ]
 
@@ -441,7 +464,7 @@ async def wizard_adopt_all_tunnels(req: AdoptAllTunnelsRequest):
             f"/ip route add dst-address=0.0.0.0/0 blackhole=yes distance=10 routing-table={table_name} comment='auto:killswitch-{t.country_code}'",
             f"/ip pool add name={pool_name} ranges={t.client_pool_range}",
             f"/ppp profile add name={profile_name} local-address={t.client_gateway_ip} remote-address={pool_name} dns-server=8.8.8.8,8.8.4.4 change-tcp-mss=yes use-encryption=required",
-            f"/interface ovpn-server server add name={ovpn_server_name} port={t.ovpn_port} protocol=udp default-profile={profile_name} certificate=server-template cipher=aes128-gcm,aes256-gcm redirect-gateway=def1 disabled=no",
+            f"/interface ovpn-server server add name={ovpn_server_name} port={t.ovpn_port} protocol={req.ovpn_protocol} default-profile={profile_name} certificate=server-template cipher=aes128-gcm,aes256-gcm redirect-gateway=def1 disabled=no",
             f"/ip firewall mangle add chain=prerouting action=mark-routing new-routing-mark={table_name} src-address={t.client_subnet} dst-address-list=!IRAN comment='auto:route-{t.country_code}'"
         ])
 

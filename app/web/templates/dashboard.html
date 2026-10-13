@@ -196,6 +196,20 @@
                     <input type="number" id="dst_ovpn_port" value="6068" required>
                 </div>
                 <div class="form-group">
+                    <label>پروتکل OpenVPN</label>
+                    <select id="dst_ovpn_protocol" style="width: 100%; background: #0f1422; color: #fff; border: 1px solid var(--border-color); padding: 8px; border-radius: 6px;">
+                        <option value="udp" selected>UDP (سرعت بالا / پیش‌فرض)</option>
+                        <option value="tcp">TCP (مقاوم در برابر اختلال / پورت 443)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>نوع تونل</label>
+                    <select id="dst_tunnel_type" style="width: 100%; background: #0f1422; color: #fff; border: 1px solid var(--border-color); padding: 8px; border-radius: 6px;">
+                        <option value="gre" selected>GRE Tunnel</option>
+                        <option value="l2tp_ether">L2TP Ethernet (Pseudowire)</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>IP میکروتیک روی تونل (/30)</label>
                     <input type="text" id="dst_local_ip" value="30.30.30.2/30" required>
                 </div>
@@ -560,102 +574,102 @@
                 <div class="wiz-console" id="consoleStep3" style="display: none;"></div>
             </div>
 
-            <!-- STEP 4: OUTBOUND TUNNELS (GRE & L2TP ETHERNET) -->
+            <!-- STEP 4: OUTBOUND TUNNELS (CUSTOMIZABLE COUNTRIES, PORTS & PROTOCOLS) -->
             <div class="wizard-step-content" id="wizardStep4">
-                <h4 style="margin-bottom: 0.5rem; color: var(--accent);">گام ۴: تعریف و ساخت تونل‌های خروجی</h4>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-                    نوع تونل، سرور مقصد خارج، و پورت اختصاصی OpenVPN را انتخاب کنید. سیستم به صورت خودکار جدول روتینگ، روت دیفالت، Killswitch، استخر، پروفایل، سرور OpenVPN و رول Mangle !IRAN را پیکربندی می‌کند.
-                </p>
-
-                <!-- Quick Presets -->
-                <div style="margin-bottom: 1rem;">
-                    <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">انتخاب سریع از مقاصد متداول:</label>
-                    <div style="display: flex; flex-wrap: wrap; gap: 8px;" id="presetChipsContainer">
-                        <span class="preset-chip active" onclick="applyDestinationPreset('de')">🇩🇪 آلمان (6066)</span>
-                        <span class="preset-chip" onclick="applyDestinationPreset('usa')">🇺🇸 آمریکا (6065)</span>
-                        <span class="preset-chip" onclick="applyDestinationPreset('eng')">🇬🇧 انگلیس (6060)</span>
-                        <span class="preset-chip" onclick="applyDestinationPreset('nl')">🇳🇱 هلند (6064)</span>
-                        <span class="preset-chip" onclick="applyDestinationPreset('fin')">🇫🇮 فنلاند (6059)</span>
-                        <span class="preset-chip" onclick="applyDestinationPreset('pol')">🇵🇱 لهستان (6063)</span>
-                        <span class="preset-chip" onclick="applyDestinationPreset('ca')">🇨🇦 کانادا (6067)</span>
-                        <span class="preset-chip" onclick="applyDestinationPreset('trk')">🇹🇷 ترکیه (6058)</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+                    <div>
+                        <h4 style="color: var(--accent); margin-bottom: 4px;">گام ۴: انتخاب و سفارشی‌سازی تونل‌ها (کشور، پورت و پروتکل)</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">
+                            کشورهایی که می‌خواهید فعال شوند را تیک بزنید؛ می‌توانید <strong>پورت</strong>، <strong>پروتکل (UDP یا TCP)</strong> و نوع تونل هر کشور را مستقیماً تغییر دهید:
+                        </p>
                     </div>
+                    <button type="button" class="btn btn-secondary" style="font-size: 0.85rem; padding: 6px 12px; border-color: var(--accent); color: var(--accent);" onclick="addCustomCountryRow()">➕ افزودن کشور دلخواه</button>
                 </div>
 
-                <!-- Tunnel Config Fields -->
-                <div style="background: #0f1422; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 1rem;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-                        <div class="form-group">
-                            <label>کد مقصد (انگلیسی)</label>
-                            <input type="text" id="wiz_tun_name" value="de" required>
-                        </div>
-                        <div class="form-group">
-                            <label>عنوان نمایشی</label>
-                            <input type="text" id="wiz_tun_label" value="Germany" required>
-                        </div>
-                        <div class="form-group">
-                            <label>نوع تونل</label>
-                            <select id="wiz_tun_type" onchange="toggleTunnelTypeFields()" style="background: #161e31; color: #fff; border: 1px solid var(--accent); padding: 8px; border-radius: 6px; width: 100%;">
-                                <option value="gre">GRE Tunnel</option>
-                                <option value="l2tp_ether">L2TP Ethernet (Pseudowire)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
-                        <div class="form-group">
-                            <label>IP سرور خارج (Public IP)</label>
-                            <input type="text" id="wiz_tun_remote" value="91.99.129.82" required>
-                        </div>
-                        <div class="form-group">
-                            <label>IP لوکال تونل (/30)</label>
-                            <input type="text" id="wiz_tun_local_ip" value="40.40.40.2/30" required>
-                        </div>
-                        <div class="form-group">
-                            <label>IP گیت‌وی تونل (ریموت)</label>
-                            <input type="text" id="wiz_tun_remote_gw" value="40.40.40.1" required>
-                        </div>
-                    </div>
-
-                    <!-- L2TPv3 specific fields -->
-                    <div id="wiz_l2tp_specific_fields" style="display: none; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 10px; background: rgba(56, 189, 248, 0.05); padding: 10px; border-radius: 6px;">
-                        <div class="form-group">
-                            <label>Local Tunnel ID</label>
-                            <input type="number" id="wiz_l2tp_ltid" value="33">
-                        </div>
-                        <div class="form-group">
-                            <label>Remote Tunnel ID</label>
-                            <input type="number" id="wiz_l2tp_rtid" value="22">
-                        </div>
-                        <div class="form-group">
-                            <label>Local Session ID</label>
-                            <input type="number" id="wiz_l2tp_lsid" value="333">
-                        </div>
-                        <div class="form-group">
-                            <label>Remote Session ID</label>
-                            <input type="number" id="wiz_l2tp_rsid" value="222">
-                        </div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
-                        <div class="form-group">
-                            <label>پورت OpenVPN</label>
-                            <input type="number" id="wiz_tun_ovpn_port" value="6066" required>
-                        </div>
-                        <div class="form-group">
-                            <label>استخر کلاینت</label>
-                            <input type="text" id="wiz_tun_pool" value="10.18.1.2-10.18.1.200" required>
-                        </div>
-                        <div class="form-group">
-                            <label>ساب‌نت کلاینت (CIDR)</label>
-                            <input type="text" id="wiz_tun_subnet" value="10.18.1.0/24" required>
-                        </div>
-                    </div>
-
-                    <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
-                        <button type="button" class="btn btn-primary" id="btnExecStep4" onclick="executeStep4AddTunnel()">⚡ ساخت و راه‌اندازی این تونل روی روتر</button>
-                    </div>
+                <!-- Column Headers -->
+                <div class="country-custom-header">
+                    <div>فعال</div>
+                    <div>کشور (کد)</div>
+                    <div>پورت OVPN</div>
+                    <div>پروتکل</div>
+                    <div>نوع تونل</div>
+                    <div>IP سرور خارج</div>
+                    <div>حذف</div>
                 </div>
+
+                <!-- Customizable Country Rows Container -->
+                <div class="country-custom-list" id="countryCustomList">
+                    <!-- Populated dynamically by JS -->
+                </div>
+
+                <!-- Action Button for Batch Creation of Checked Countries -->
+                <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">
+                        با کلیک روی دکمه روبرو، روتینگ، Killswitch، OpenVPN Server و Mangle تمام کشورهای تیک‌خورده ساخته می‌شود:
+                    </div>
+                    <button type="button" class="btn btn-primary" id="btnExecBatchCountries" onclick="executeBatchCustomCountries()">⚡ ساخت و فعال‌سازی تمام کشورهای تیک‌خورده</button>
+                </div>
+
+                <!-- Optional Single Advanced Form Toggle -->
+                <details style="background: #0f1422; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; margin-bottom: 1rem;">
+                    <summary style="cursor: pointer; font-size: 0.85rem; color: var(--accent); font-weight: 600;">
+                        ⚙️ تعریف دستی یک تونل پیشرفته اختصاصی (L2TPv3 IDs، رنج‌های خاص /30)
+                    </summary>
+                    <div style="margin-top: 12px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
+                            <div class="form-group">
+                                <label>کد کشور</label>
+                                <input type="text" id="wiz_tun_name" value="custom">
+                            </div>
+                            <div class="form-group">
+                                <label>نام نمایشی</label>
+                                <input type="text" id="wiz_tun_label" value="Custom Server">
+                            </div>
+                            <div class="form-group">
+                                <label>پورت OVPN</label>
+                                <input type="number" id="wiz_tun_ovpn_port" value="443">
+                            </div>
+                            <div class="form-group">
+                                <label>پروتکل OVPN</label>
+                                <select id="wiz_tun_ovpn_proto" style="background: #161e31; color: #fff; border: 1px solid var(--accent); padding: 8px; border-radius: 6px; width: 100%;">
+                                    <option value="udp">UDP</option>
+                                    <option value="tcp">TCP</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 8px;">
+                            <div class="form-group">
+                                <label>نوع تونل</label>
+                                <select id="wiz_tun_type" onchange="toggleTunnelTypeFields()" style="background: #161e31; color: #fff; border: 1px solid var(--accent); padding: 8px; border-radius: 6px; width: 100%;">
+                                    <option value="gre">GRE Tunnel</option>
+                                    <option value="l2tp_ether">L2TP Ethernet (Pseudowire)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>IP سرور خارج</label>
+                                <input type="text" id="wiz_tun_remote" value="1.2.3.4">
+                            </div>
+                            <div class="form-group">
+                                <label>IP لوکال تونل (/30)</label>
+                                <input type="text" id="wiz_tun_local_ip" value="50.50.50.2/30">
+                            </div>
+                            <div class="form-group">
+                                <label>IP گیت‌وی تونل</label>
+                                <input type="text" id="wiz_tun_remote_gw" value="50.50.50.1">
+                            </div>
+                        </div>
+                        <!-- L2TPv3 specific fields -->
+                        <div id="wiz_l2tp_specific_fields" style="display: none; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 10px; background: rgba(56, 189, 248, 0.05); padding: 10px; border-radius: 6px;">
+                            <div class="form-group"><label>Local Tunnel ID</label><input type="number" id="wiz_l2tp_ltid" value="33"></div>
+                            <div class="form-group"><label>Remote Tunnel ID</label><input type="number" id="wiz_l2tp_rtid" value="22"></div>
+                            <div class="form-group"><label>Local Session ID</label><input type="number" id="wiz_l2tp_lsid" value="333"></div>
+                            <div class="form-group"><label>Remote Session ID</label><input type="number" id="wiz_l2tp_rsid" value="222"></div>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; justify-content: flex-end;">
+                            <button type="button" class="btn btn-secondary" onclick="executeStep4AddTunnel()">⚡ ساخت این تونل اختصاصی</button>
+                        </div>
+                    </div>
+                </details>
 
                 <div class="wiz-console" id="consoleStep4" style="display: none;"></div>
                 <div id="wiz_added_tunnels_box" style="margin-top: 10px;"></div>

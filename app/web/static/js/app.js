@@ -45,11 +45,12 @@ async function submitDestination(e) {
     const data = {
         name: document.getElementById('dst_name').value.toLowerCase().trim(),
         country_label: document.getElementById('dst_label').value.trim(),
+        tunnel_type: document.getElementById('dst_tunnel_type') ? document.getElementById('dst_tunnel_type').value : 'gre',
         remote_ip: document.getElementById('dst_remote_ip').value.trim(),
         tunnel_local_ip: document.getElementById('dst_local_ip').value.trim(),
         tunnel_remote_ip: document.getElementById('dst_remote_tun_ip').value.trim(),
         ovpn_port: parseInt(document.getElementById('dst_ovpn_port').value),
-        ovpn_protocol: 'udp',
+        ovpn_protocol: document.getElementById('dst_ovpn_protocol') ? document.getElementById('dst_ovpn_protocol').value : 'udp',
         client_pool_range: document.getElementById('dst_pool_range').value.trim(),
         client_gateway_ip: document.getElementById('dst_gw').value.trim(),
         client_subnet: document.getElementById('dst_subnet').value.trim(),
@@ -209,6 +210,7 @@ async function deleteServer(id) {
 }
 
 
+
 // --- SMART MULTI-SCENARIO INTERACTIVE WIZARD ---
 let activeWizardScenario = 'full'; // 'full' | 'adopt' | 'services_only'
 let wizCurrentStep = 1;
@@ -217,19 +219,19 @@ let wizServerName = 'CHR-Production-New';
 let detectedTunnelsList = [];
 let allExecutedWizardCommands = [];
 let addedDestinationsList = [];
-
-const PRESET_DESTINATIONS = {
-    'de': { name: 'de', country_label: 'Germany', tunnel_type: 'gre', remote_ip: '91.99.129.82', tunnel_local_ip: '40.40.40.2/30', tunnel_remote_ip: '40.40.40.1', ovpn_port: 6066, ovpn_protocol: 'udp', client_pool_range: '10.18.1.2-10.18.1.200', client_gateway_ip: '10.18.1.1', client_subnet: '10.18.1.0/24' },
-    'usa': { name: 'usa', country_label: 'United States', tunnel_type: 'gre', remote_ip: '69.197.190.75', tunnel_local_ip: '10.10.11.2/30', tunnel_remote_ip: '10.10.11.1', ovpn_port: 6065, ovpn_protocol: 'udp', client_pool_range: '10.17.1.2-10.17.1.200', client_gateway_ip: '10.17.1.1', client_subnet: '10.17.1.0/24' },
-    'eng': { name: 'eng', country_label: 'United Kingdom', tunnel_type: 'gre', remote_ip: '51.38.66.183', tunnel_local_ip: '10.10.3.2/30', tunnel_remote_ip: '10.10.3.1', ovpn_port: 6060, ovpn_protocol: 'udp', client_pool_range: '10.16.1.2-10.16.1.200', client_gateway_ip: '10.16.1.1', client_subnet: '10.16.1.0/24' },
-    'nl': { name: 'nl', country_label: 'Netherlands', tunnel_type: 'gre', remote_ip: '94.102.57.228', tunnel_local_ip: '10.10.7.2/30', tunnel_remote_ip: '10.10.7.1', ovpn_port: 6064, ovpn_protocol: 'udp', client_pool_range: '10.15.1.2-10.15.1.200', client_gateway_ip: '10.15.1.1', client_subnet: '10.15.1.0/24' },
-    'pol': { name: 'pol', country_label: 'Poland', tunnel_type: 'gre', remote_ip: '51.77.38.238', tunnel_local_ip: '10.10.4.2/30', tunnel_remote_ip: '10.10.4.1', ovpn_port: 6063, ovpn_protocol: 'udp', client_pool_range: '10.13.1.2-10.13.1.200', client_gateway_ip: '10.13.1.1', client_subnet: '10.13.1.0/24' },
-    'fin': { name: 'fin', country_label: 'Finland', tunnel_type: 'gre', remote_ip: '65.108.18.128', tunnel_local_ip: '10.10.2.2/30', tunnel_remote_ip: '10.10.2.1', ovpn_port: 6059, ovpn_protocol: 'udp', client_pool_range: '10.12.1.2-10.12.1.200', client_gateway_ip: '10.12.1.1', client_subnet: '10.12.1.0/24' },
-    'ca': { name: 'ca', country_label: 'Canada', tunnel_type: 'gre', remote_ip: '67.55.2.40', tunnel_local_ip: '20.20.3.2/30', tunnel_remote_ip: '20.20.3.1', ovpn_port: 6067, ovpn_protocol: 'udp', client_pool_range: '10.19.1.2-10.19.1.200', client_gateway_ip: '10.19.1.1', client_subnet: '10.19.1.0/24' },
-    'trk': { name: 'trk', country_label: 'Turkey', tunnel_type: 'gre', remote_ip: '188.132.174.132', tunnel_local_ip: '10.10.12.2/30', tunnel_remote_ip: '10.10.12.1', ovpn_port: 6058, ovpn_protocol: 'udp', client_pool_range: '10.11.1.2-10.11.1.200', client_gateway_ip: '10.11.1.1', client_subnet: '10.11.1.0/24' }
-};
-
 let cachedFleetServers = [];
+
+// Customizable Countries List with custom ports and protocols
+let customizableCountriesList = [
+    { checked: true, code: 'de', flag: '🇩🇪', label: 'آلمان', port: 6066, proto: 'udp', type: 'gre', remote_ip: '91.99.129.82', local_30: '40.40.40.2/30', gw_30: '40.40.40.1', pool: '10.18.1.2-10.18.1.200', subnet: '10.18.1.0/24' },
+    { checked: true, code: 'usa', flag: '🇺🇸', label: 'آمریکا', port: 6065, proto: 'udp', type: 'gre', remote_ip: '69.197.190.75', local_30: '10.10.11.2/30', gw_30: '10.10.11.1', pool: '10.17.1.2-10.17.1.200', subnet: '10.17.1.0/24' },
+    { checked: true, code: 'eng', flag: '🇬🇧', label: 'انگلیس', port: 6060, proto: 'tcp', type: 'gre', remote_ip: '51.38.66.183', local_30: '10.10.3.2/30', gw_30: '10.10.3.1', pool: '10.16.1.2-10.16.1.200', subnet: '10.16.1.0/24' },
+    { checked: true, code: 'nl', flag: '🇳🇱', label: 'هلند', port: 6064, proto: 'udp', type: 'gre', remote_ip: '94.102.57.228', local_30: '10.10.7.2/30', gw_30: '10.10.7.1', pool: '10.15.1.2-10.15.1.200', subnet: '10.15.1.0/24' },
+    { checked: false, code: 'fin', flag: '🇫🇮', label: 'فنلاند', port: 6059, proto: 'udp', type: 'gre', remote_ip: '65.108.18.128', local_30: '10.10.2.2/30', gw_30: '10.10.2.1', pool: '10.12.1.2-10.12.1.200', subnet: '10.12.1.0/24' },
+    { checked: false, code: 'pol', flag: '🇵🇱', label: 'لهستان', port: 6063, proto: 'udp', type: 'gre', remote_ip: '51.77.38.238', local_30: '10.10.4.2/30', gw_30: '10.10.4.1', pool: '10.13.1.2-10.13.1.200', subnet: '10.13.1.0/24' },
+    { checked: false, code: 'ca', flag: '🇨🇦', label: 'کانادا', port: 6067, proto: 'udp', type: 'gre', remote_ip: '67.55.2.40', local_30: '20.20.3.2/30', gw_30: '20.20.3.1', pool: '10.19.1.2-10.19.1.200', subnet: '10.19.1.0/24' },
+    { checked: false, code: 'trk', flag: '🇹🇷', label: 'ترکیه', port: 6058, proto: 'udp', type: 'gre', remote_ip: '188.132.174.132', local_30: '10.10.12.2/30', gw_30: '10.10.12.1', pool: '10.11.1.2-10.11.1.200', subnet: '10.11.1.0/24' }
+];
 
 // Launch Wizard Modal
 async function openWizardModal() {
@@ -262,6 +264,7 @@ async function openWizardModal() {
         console.error('Failed to load fleet servers', e);
     }
 
+    renderCustomizableCountryRows();
     openModal('wizardModal');
 }
 
@@ -269,7 +272,6 @@ async function openWizardModal() {
 function onFleetServerSelect() {
     const srvId = document.getElementById('wiz_fleet_select').value;
     if (!srvId) {
-        // Defaults for new server
         document.getElementById('wiz_name').value = 'CHR-Production-New';
         document.getElementById('wiz_host').value = '95.216.100.50';
         document.getElementById('wiz_api_port').value = 8728;
@@ -362,6 +364,9 @@ function updateWizardStepperUI() {
 function goToWizardStep(step) {
     wizCurrentStep = step;
     updateWizardStepperUI();
+    if (step === 4 && activeWizardScenario === 'full') {
+        renderCustomizableCountryRows();
+    }
     if (step === 5) {
         renderFinalSummary();
     }
@@ -381,23 +386,160 @@ function toggleTunnelTypeFields() {
     document.getElementById('wiz_l2tp_specific_fields').style.display = isL2tp ? 'grid' : 'none';
 }
 
-function applyDestinationPreset(key) {
-    document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
-    if (event && event.target) event.target.classList.add('active');
-    
-    const p = PRESET_DESTINATIONS[key];
-    if (!p) return;
-    
-    document.getElementById('wiz_tun_name').value = p.name;
-    document.getElementById('wiz_tun_label').value = p.country_label;
-    document.getElementById('wiz_tun_type').value = p.tunnel_type;
-    document.getElementById('wiz_tun_remote').value = p.remote_ip;
-    document.getElementById('wiz_tun_local_ip').value = p.tunnel_local_ip;
-    document.getElementById('wiz_tun_remote_gw').value = p.tunnel_remote_ip;
-    document.getElementById('wiz_tun_ovpn_port').value = p.ovpn_port;
-    document.getElementById('wiz_tun_pool').value = p.client_pool_range;
-    document.getElementById('wiz_tun_subnet').value = p.client_subnet;
-    toggleTunnelTypeFields();
+// --- RENDER CUSTOMIZABLE COUNTRY ROWS (STEP 4) ---
+function renderCustomizableCountryRows() {
+    const container = document.getElementById('countryCustomList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    customizableCountriesList.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'country-custom-row';
+        row.id = `c_row_${idx}`;
+
+        row.innerHTML = `
+            <div>
+                <input type="checkbox" id="c_chk_${idx}" ${item.checked ? 'checked' : ''} onchange="customizableCountriesList[${idx}].checked = this.checked">
+            </div>
+            <div>
+                <strong style="color: #fff; font-size: 0.88rem;">${item.flag || '🌐'} ${item.label}</strong>
+                <span style="font-size: 0.72rem; color: var(--text-muted); display: block;"><code>${item.code}</code></span>
+            </div>
+            <div>
+                <input type="number" id="c_port_${idx}" value="${item.port}" title="پورت اختصاصی OpenVPN" onchange="customizableCountriesList[${idx}].port = parseInt(this.value)">
+            </div>
+            <div>
+                <select id="c_proto_${idx}" onchange="customizableCountriesList[${idx}].proto = this.value">
+                    <option value="udp" ${item.proto === 'udp' ? 'selected' : ''}>UDP</option>
+                    <option value="tcp" ${item.proto === 'tcp' ? 'selected' : ''}>TCP</option>
+                </select>
+            </div>
+            <div>
+                <select id="c_type_${idx}" onchange="customizableCountriesList[${idx}].type = this.value">
+                    <option value="gre" ${item.type === 'gre' ? 'selected' : ''}>GRE</option>
+                    <option value="l2tp_ether" ${item.type === 'l2tp_ether' ? 'selected' : ''}>L2TP-Ether</option>
+                </select>
+            </div>
+            <div>
+                <input type="text" id="c_ip_${idx}" value="${item.remote_ip}" placeholder="IP سرور خارج" onchange="customizableCountriesList[${idx}].remote_ip = this.value.trim()">
+            </div>
+            <div>
+                <button type="button" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.1rem;" onclick="removeCustomCountryRow(${idx})">✕</button>
+            </div>
+        `;
+        container.appendChild(row);
+    });
+}
+
+function addCustomCountryRow() {
+    const nextIdx = customizableCountriesList.length + 1;
+    const newCountry = {
+        checked: true,
+        code: `c${nextIdx}`,
+        flag: '🌐',
+        label: `مقصد ${nextIdx}`,
+        port: 6070 + nextIdx,
+        proto: 'udp',
+        type: 'gre',
+        remote_ip: '1.2.3.4',
+        local_30: `10.${50 + nextIdx}.1.2/30`,
+        gw_30: `10.${50 + nextIdx}.1.1`,
+        pool: `10.${50 + nextIdx}.1.2-10.${50 + nextIdx}.1.200`,
+        subnet: `10.${50 + nextIdx}.1.0/24`
+    };
+    customizableCountriesList.push(newCountry);
+    renderCustomizableCountryRows();
+}
+
+function removeCustomCountryRow(idx) {
+    customizableCountriesList.splice(idx, 1);
+    renderCustomizableCountryRows();
+}
+
+// --- EXECUTE BATCH CUSTOM COUNTRIES (STEP 4) ---
+async function executeBatchCustomCountries() {
+    const btn = document.getElementById('btnExecBatchCountries');
+    const consoleBox = document.getElementById('consoleStep4');
+    const nextBtn = document.getElementById('btnNextStep4');
+    const addedBox = document.getElementById('wiz_added_tunnels_box');
+
+    // Collect checked countries with their current DOM values
+    const selectedDests = [];
+    customizableCountriesList.forEach((item, idx) => {
+        const isChecked = document.getElementById(`c_chk_${idx}`) ? document.getElementById(`c_chk_${idx}`).checked : item.checked;
+        if (isChecked) {
+            const port = parseInt(document.getElementById(`c_port_${idx}`).value) || item.port;
+            const proto = document.getElementById(`c_proto_${idx}`).value || item.proto;
+            const tunType = document.getElementById(`c_type_${idx}`).value || item.type;
+            const remoteIp = document.getElementById(`c_ip_${idx}`).value.trim() || item.remote_ip;
+
+            selectedDests.push({
+                name: item.code.toLowerCase(),
+                country_label: item.label,
+                tunnel_type: tunType,
+                remote_ip: remoteIp,
+                tunnel_local_ip: item.local_30 || `40.${idx+10}.1.2/30`,
+                tunnel_remote_ip: item.gw_30 || `40.${idx+10}.1.1`,
+                ovpn_port: port,
+                ovpn_protocol: proto,
+                ovpn_certificate: 'server-template',
+                client_pool_range: item.pool || `10.${idx+20}.1.2-10.${idx+20}.1.200`,
+                client_gateway_ip: item.gw_30 ? item.pool.split('-')[0].replace(/\.[0-9]+$/, '.1') : `10.${idx+20}.1.1`,
+                client_subnet: item.subnet || `10.${idx+20}.1.0/24`,
+                enable_killswitch: true,
+                bypass_iran: true
+            });
+        }
+    });
+
+    if (selectedDests.length === 0) {
+        alert('لطفاً حداقل یک کشور را جهت فعال‌سازی تیک بزنید.');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = `⏳ در حال پیکربندی ${selectedDests.length} کشور با پورت و پروتکل سفارشی...`;
+    consoleBox.style.display = 'block';
+    consoleBox.innerText = `# [گام ۴] در حال ساخت ${selectedDests.length} مسیر روتینگ، Killswitch و OpenVPN Server...
+
+`;
+
+    try {
+        const res = await fetch('/api/wizard/step4-batch-tunnels', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ server_id: wizServerId, destinations: selectedDests })
+        });
+        const data = await res.json();
+        allExecutedWizardCommands.push(...data.commands);
+        addedDestinationsList.push(...selectedDests);
+
+        consoleBox.innerText += '✅ ' + data.message + '
+
+' + data.commands.join('
+');
+        btn.innerText = `✅ تعداد ${selectedDests.length} کشور با موفقیت ساخته شد`;
+        btn.style.background = 'var(--success)';
+        btn.style.color = '#000';
+
+        // Render summary badges
+        addedBox.innerHTML = '';
+        selectedDests.forEach(d => {
+            const badge = document.createElement('span');
+            badge.className = 'tag-pill';
+            badge.style.margin = '4px';
+            badge.style.color = 'var(--success)';
+            badge.innerText = `✅ ${d.country_label} (${d.tunnel_type.toUpperCase()} | پورت ${d.ovpn_port} ${d.ovpn_protocol.toUpperCase()})`;
+            addedBox.appendChild(badge);
+        });
+
+        nextBtn.disabled = false;
+        nextBtn.style.opacity = '1';
+    } catch (err) {
+        consoleBox.innerText += '❌ خطا: ' + err.message;
+        btn.disabled = false;
+        btn.innerText = 'تلاش مجدد';
+    }
 }
 
 // --- STEP 1: CONNECT & AUTO-SCAN ---
@@ -617,9 +759,8 @@ function onFinishStep3() {
     }
 }
 
-// --- STEP 4: ADD OUTBOUND TUNNEL ---
+// --- STEP 4: SINGLE ADVANCED TUNNEL EXECUTE ---
 async function executeStep4AddTunnel() {
-    const btn = document.getElementById('btnExecStep4');
     const consoleBox = document.getElementById('consoleStep4');
     const nextBtn = document.getElementById('btnNextStep4');
     const addedBox = document.getElementById('wiz_added_tunnels_box');
@@ -633,11 +774,11 @@ async function executeStep4AddTunnel() {
         tunnel_local_ip: document.getElementById('wiz_tun_local_ip').value.trim(),
         tunnel_remote_ip: document.getElementById('wiz_tun_remote_gw').value.trim(),
         ovpn_port: parseInt(document.getElementById('wiz_tun_ovpn_port').value),
-        ovpn_protocol: 'udp',
+        ovpn_protocol: document.getElementById('wiz_tun_ovpn_proto').value,
         ovpn_certificate: 'server-template',
-        client_pool_range: document.getElementById('wiz_tun_pool').value.trim(),
-        client_gateway_ip: document.getElementById('wiz_tun_pool').value.split('-')[0].replace(/\.[0-9]+$/, '.1'),
-        client_subnet: document.getElementById('wiz_tun_subnet').value.trim(),
+        client_pool_range: '10.25.1.2-10.25.1.200',
+        client_gateway_ip: '10.25.1.1',
+        client_subnet: '10.25.1.0/24',
         enable_killswitch: true,
         bypass_iran: true,
         local_tunnel_id: parseInt(document.getElementById('wiz_l2tp_ltid').value) || 33,
@@ -646,9 +787,9 @@ async function executeStep4AddTunnel() {
         remote_session_id: parseInt(document.getElementById('wiz_l2tp_rsid').value) || 222
     };
 
-    btn.disabled = true;
-    btn.innerText = '⏳ در حال ساخت تونل و روتینگ...';
     consoleBox.style.display = 'block';
+    consoleBox.innerText = '⏳ در حال ساخت تونل اختصاصی...
+';
 
     try {
         const res = await fetch('/api/wizard/step4-tunnel', {
@@ -664,27 +805,22 @@ async function executeStep4AddTunnel() {
 
 ' + data.commands.join('
 ');
-        btn.disabled = false;
-        btn.innerText = '⚡ ساخت یک تونل دیگر';
         
-        // Render badge
         const badge = document.createElement('span');
         badge.className = 'tag-pill';
         badge.style.margin = '4px';
         badge.style.color = 'var(--success)';
-        badge.innerText = `✅ ${dest.country_label} (${dest.tunnel_type.toUpperCase()} : ${dest.ovpn_port})`;
+        badge.innerText = `✅ ${dest.country_label} (${dest.tunnel_type.toUpperCase()} | ${dest.ovpn_port} ${dest.ovpn_protocol.toUpperCase()})`;
         addedBox.appendChild(badge);
 
         nextBtn.disabled = false;
         nextBtn.style.opacity = '1';
     } catch (err) {
         consoleBox.innerText = '❌ خطا: ' + err.message;
-        btn.disabled = false;
-        btn.innerText = 'تلاش مجدد';
     }
 }
 
-// --- SCENARIO 2: ADOPT EXISTING TUNNELS ---
+// --- SCENARIO 2: ADOPT EXISTING TUNNELS WITH PROTOCOL SELECTOR ---
 function renderAdoptTunnels() {
     const container = document.getElementById('wizAdoptTunnelsContainer');
     container.innerHTML = '';
@@ -713,9 +849,16 @@ function renderAdoptTunnels() {
                 </div>
                 <button type="button" class="btn btn-primary" id="btnAdopt_${idx}" onclick="adoptSingleTunnel(${idx}, '${tun.name}', '${tun.type}', '${defaultGw}')">⚡ ساخت روتینگ و OpenVPN</button>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; font-size: 0.85rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px; font-size: 0.85rem;">
                 <div><label>کد مقصد:</label><input type="text" id="ad_code_${idx}" value="${cleanName}"></div>
                 <div><label>پورت OpenVPN:</label><input type="number" id="ad_port_${idx}" value="${defaultPort}"></div>
+                <div>
+                    <label>پروتکل:</label>
+                    <select id="ad_proto_${idx}" style="background: #161e31; color: #fff; border: 1px solid var(--border-color); padding: 6px; border-radius: 6px; width: 100%;">
+                        <option value="udp" selected>UDP</option>
+                        <option value="tcp">TCP</option>
+                    </select>
+                </div>
                 <div><label>استخر کلاینت:</label><input type="text" id="ad_pool_${idx}" value="${defaultPool}"></div>
                 <div><label>ساب‌نت کلاینت:</label><input type="text" id="ad_sub_${idx}" value="${defaultSubnet}"></div>
             </div>
@@ -741,7 +884,8 @@ async function adoptSingleTunnel(idx, tunName, tunType, defaultGw) {
         client_pool_range: document.getElementById('ad_pool_' + idx).value.trim(),
         client_gateway_ip: document.getElementById('ad_pool_' + idx).value.split('-')[0].replace(/\.[0-9]+$/, '.1'),
         client_subnet: document.getElementById('ad_sub_' + idx).value.trim(),
-        ovpn_port: parseInt(document.getElementById('ad_port_' + idx).value)
+        ovpn_port: parseInt(document.getElementById('ad_port_' + idx).value),
+        ovpn_protocol: document.getElementById('ad_proto_' + idx).value
     };
 
     try {
@@ -778,6 +922,7 @@ async function adoptAllDetectedTunnels() {
     detectedTunnelsList.forEach((tun, idx) => {
         const code = document.getElementById('ad_code_' + idx).value.trim();
         const port = parseInt(document.getElementById('ad_port_' + idx).value);
+        const proto = document.getElementById('ad_proto_' + idx).value;
         const pool = document.getElementById('ad_pool_' + idx).value.trim();
         const sub = document.getElementById('ad_sub_' + idx).value.trim();
         const gw = tun.gw_ip || pool.split('-')[0].replace(/\.[0-9]+$/, '.1');
@@ -792,7 +937,8 @@ async function adoptAllDetectedTunnels() {
             client_pool_range: pool,
             client_gateway_ip: pool.split('-')[0].replace(/\.[0-9]+$/, '.1'),
             client_subnet: sub,
-            ovpn_port: port
+            ovpn_port: port,
+            ovpn_protocol: proto
         });
     });
 
@@ -816,7 +962,7 @@ async function adoptAllDetectedTunnels() {
         });
 
         btnAll.innerText = `✅ تمام ${tunnelsPayload.length} تونل همگام شدند`;
-        alert(`🎉 تبریک! تعداد ${tunnelsPayload.length} تونل با موفقیت روتینگ، Killswitch و OpenVPN اختصاصی دریافت کردند.`);
+        alert(`🎉 تبریک! تعداد ${tunnelsPayload.length} تونل با پورت و پروتکل سفارشی، روتینگ، Killswitch و OpenVPN دریافت کردند.`);
     } catch (err) {
         alert('خطا: ' + err.message);
         btnAll.disabled = false;
