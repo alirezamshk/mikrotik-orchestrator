@@ -3,41 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MikroTik Fleet Orchestrator</title>
+    <title>MikroTik Fleet Orchestrator (Simulator Mode)</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .mock-banner {
+            background: linear-gradient(90deg, rgba(56, 189, 248, 0.15), rgba(16, 185, 129, 0.15));
+            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 10px 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        .code-block {
+            background: #090d16;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #38bdf8;
+            overflow-x: auto;
+            direction: ltr;
+            text-align: left;
+            line-height: 1.6;
+            margin-top: 10px;
+        }
+        .tag-pill {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+    </style>
 </head>
 <body>
+
+<div class="mock-banner">
+    <div>
+        <span>🧪 <strong>حالت تست و شبیه‌ساز (Simulator Mode) فعال است:</strong> نیازی به اتصال به روتر واقعی نیست. می‌توانید سناریوها را تست کنید و دستورات تولیدشده میکروتیک را بررسی نمایید.</span>
+    </div>
+    <div>
+        <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="showLogsModal()">📜 مشاهده لاگ دستورات میکروتیک</button>
+    </div>
+</div>
 
 <nav class="navbar">
     <div class="logo">
         <span>⚡ MikroTik Fleet Orchestrator</span>
     </div>
     <div>
-        <span style="font-size: 0.85rem; color: var(--text-muted);">نسخه: {{ app_version }}</span>
+        <span style="font-size: 0.85rem; color: var(--text-muted);">نسخه: {{ app_version }} | حالت: Demo & Test</span>
     </div>
 </nav>
 
 <div class="container">
     <div class="stats-grid">
         <div class="stat-card">
-            <span class="stat-label">تعداد کل کاربران آنلاین</span>
+            <span class="stat-label">مجموع کاربران آنلاین (تست)</span>
             <span class="stat-value" style="color: var(--accent);">{{ total_users }}</span>
         </div>
         <div class="stat-card">
-            <span class="stat-label">سرورهای آنلاین</span>
+            <span class="stat-label">سرورهای در دسترس</span>
             <span class="stat-value" style="color: var(--success);">{{ online_count }} / {{ total_count }}</span>
         </div>
         <div class="stat-card">
-            <span class="stat-label">احراز هویت مرکزی</span>
-            <span class="stat-value" style="font-size: 1.2rem; color: var(--text-muted); margin-top: 8px;">EAP-RADIUS Active</span>
+            <span class="stat-label">وضعیت RADIUS & IKEv2</span>
+            <span class="stat-value" style="font-size: 1.2rem; color: var(--text-muted); margin-top: 8px;">EAP-RADIUS شبیه‌سازی‌شده</span>
         </div>
     </div>
 
     <div class="actions-bar">
-        <h2>سرورهای متصل</h2>
+        <h2>سرورهای ناوگان میکروتیک</h2>
         <div style="display: flex; gap: 10px;">
-            <button class="btn btn-primary" onclick="openModal('addServerModal')">+ افزودن سرور جدید</button>
-            <button class="btn btn-secondary" onclick="openModal('addDestModal')">🌍 افزودن مسیر کشور جدید (همه سرورها)</button>
+            <button class="btn btn-primary" onclick="openModal('addDestModal')">🌍 تست افزودن کشور جدید به همه روترها</button>
+            <button class="btn btn-secondary" onclick="openModal('addServerModal')">+ افزودن سرور به لیست</button>
         </div>
     </div>
 
@@ -48,24 +89,26 @@
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
                     <h3 style="font-size: 1.15rem;">{{ s.name }}</h3>
                     <span class="status-badge {% if s.online %}badge-online{% else %}badge-offline{% endif %}">
-                        {% if s.online %}● آنلاین{% else %}○ آفلاین{% endif %}
+                        {% if s.online %}● آنلاین (شبیه‌ساز){% else %}○ آفلاین{% endif %}
                     </span>
+                    <span class="tag-pill">RouterOS {{ s.version or '7.x' }}</span>
                 </div>
                 <div style="font-size: 0.9rem; color: var(--text-muted);">
-                    <span>IP: {{ s.host }}</span> |
+                    <span>IP فرضی: {{ s.host }}</span> |
                     <span>کاربران آنلاین: {{ s.ppp_active_users + s.ipsec_active_peers }}</span> |
-                    <span>تونل‌های خروجی: {{ s.tunnels_count }}</span> |
-                    <span>RouterOS: {{ s.version or '—' }}</span>
+                    <span>تونل‌های فعال: {{ s.tunnels_count }}</span> |
+                    <span>Uptime: {{ s.uptime or '—' }}</span> |
+                    <span>مصرف CPU: {{ s.cpu_load or 0 }}%</span>
                 </div>
             </div>
             <div style="display: flex; gap: 8px;">
-                <button class="btn btn-secondary" onclick="manageServer('{{ s.id }}')">مدیریت تونل‌ها</button>
+                <button class="btn btn-secondary" onclick="viewServerTunnels('{{ s.id }}', '{{ s.name }}')">مشاهده تونل‌ها</button>
                 <button class="btn btn-secondary" style="color: var(--danger);" onclick="deleteServer('{{ s.id }}')">حذف</button>
             </div>
         </div>
         {% else %}
         <div style="text-align: center; padding: 4rem; color: var(--text-muted); background: var(--bg-card); border-radius: 12px;">
-            هنوز سروری اضافه نشده است. روی دکمه «افزودن سرور جدید» کلیک کنید.
+            هنوز سروری اضافه نشده است.
         </div>
         {% endfor %}
     </div>
@@ -78,11 +121,11 @@
         <form id="serverForm" onsubmit="submitServer(event)">
             <div class="form-group">
                 <label>شناسه / نام سرور</label>
-                <input type="text" id="srv_name" required placeholder="مثال: V2Moon-Pooyan">
+                <input type="text" id="srv_name" required placeholder="مثال: CHR-Tabriz-01">
             </div>
             <div class="form-group">
                 <label>آدرس IP یا دامنه سرور</label>
-                <input type="text" id="srv_host" required placeholder="مثال: 5.10.248.30">
+                <input type="text" id="srv_host" required placeholder="مثال: 185.100.50.2">
             </div>
             <div class="form-group">
                 <label>پورت API میکروتیک (پیش‌فرض 8728)</label>
@@ -94,7 +137,7 @@
             </div>
             <div class="form-group">
                 <label>رمز عبور</label>
-                <input type="password" id="srv_pass" placeholder="رمز عبور میکروتیک">
+                <input type="password" id="srv_pass" placeholder="رمز عبور">
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('addServerModal')">انصراف</button>
@@ -106,50 +149,84 @@
 
 <!-- Modal: Add Destination to all -->
 <div id="addDestModal" class="modal">
-    <div class="modal-content">
-        <h3 style="margin-bottom: 1.5rem;">🌍 افزودن کشور جدید به همه سرورها</h3>
+    <div class="modal-content" style="max-width: 650px;">
+        <h3 style="margin-bottom: 0.5rem;">🌍 تست افزودن کشور جدید به روترها</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.2rem;">
+            در این بخش مشخصات یک تونل و کشور جدید را وارد کنید. سیستم تمام مراحل کانفیگ را شبیه‌سازی کرده و دستورات خروجی RouterOS را به شما نشان می‌دهد.
+        </p>
         <form id="destForm" onsubmit="submitDestination(event)">
-            <div class="form-group">
-                <label>کد کشور (کوتاه)</label>
-                <input type="text" id="dst_name" required placeholder="مثال: de, usa, nl, fr">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label>کد کوتاه کشور (e.g. de, fr, nl)</label>
+                    <input type="text" id="dst_name" value="fr" required>
+                </div>
+                <div class="form-group">
+                    <label>نام کشور</label>
+                    <input type="text" id="dst_label" value="France" required>
+                </div>
+                <div class="form-group">
+                    <label>IP سرور خارج (Endpoint پابلیک)</label>
+                    <input type="text" id="dst_remote_ip" value="51.15.20.100" required>
+                </div>
+                <div class="form-group">
+                    <label>پورت اختصاصی OpenVPN</label>
+                    <input type="number" id="dst_ovpn_port" value="6068" required>
+                </div>
+                <div class="form-group">
+                    <label>IP میکروتیک روی تونل (/30)</label>
+                    <input type="text" id="dst_local_ip" value="30.30.30.2/30" required>
+                </div>
+                <div class="form-group">
+                    <label>IP ریموت روی تونل (Gateway)</label>
+                    <input type="text" id="dst_remote_tun_ip" value="30.30.30.1" required>
+                </div>
             </div>
-            <div class="form-group">
-                <label>عنوان نمایشی کشور</label>
-                <input type="text" id="dst_label" required placeholder="مثال: Germany, Netherlands">
-            </div>
-            <div class="form-group">
-                <label>IP پابلیک سرور مقصد (VPS خارج)</label>
-                <input type="text" id="dst_remote_ip" required placeholder="مثال: 91.99.129.82">
-            </div>
-            <div class="form-group">
-                <label>IP میکروتیک روی تونل (/30)</label>
-                <input type="text" id="dst_local_ip" required placeholder="مثال: 40.40.40.2/30">
-            </div>
-            <div class="form-group">
-                <label>IP مقصد روی تونل (Gateway)</label>
-                <input type="text" id="dst_remote_tun_ip" required placeholder="مثال: 40.40.40.1">
-            </div>
-            <div class="form-group">
-                <label>پورت اختصاصی OpenVPN برای این کشور</label>
-                <input type="number" id="dst_ovpn_port" required placeholder="مثال: 6066">
-            </div>
-            <div class="form-group">
+            
+            <div class="form-group" style="margin-top: 6px;">
                 <label>رنج Pool اختصاصی کاربران این کشور</label>
-                <input type="text" id="dst_pool_range" required placeholder="مثال: 10.18.1.2-10.18.1.200">
+                <input type="text" id="dst_pool_range" value="10.20.1.2-10.20.1.200" required>
             </div>
-            <div class="form-group">
-                <label>Gateway رنج کاربران</label>
-                <input type="text" id="dst_gw" required placeholder="مثال: 10.18.1.1">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label>Gateway کلاینت‌ها</label>
+                    <input type="text" id="dst_gw" value="10.20.1.1" required>
+                </div>
+                <div class="form-group">
+                    <label>Subnet کلاینت‌ها</label>
+                    <input type="text" id="dst_subnet" value="10.20.1.0/24" required>
+                </div>
             </div>
-            <div class="form-group">
-                <label>ساب‌نت رنج کاربران</label>
-                <input type="text" id="dst_subnet" required placeholder="مثال: 10.18.1.0/24">
-            </div>
+
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('addDestModal')">انصراف</button>
-                <button type="submit" class="btn btn-primary">ایجاد خودکار روی سرورها</button>
+                <button type="submit" class="btn btn-primary">تست و اعمال شبیه‌سازی</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Modal: Result / Generated Code -->
+<div id="resultModal" class="modal">
+    <div class="modal-content" style="max-width: 750px;">
+        <h3 id="resultTitle" style="margin-bottom: 0.5rem; color: var(--success);">عملیات شبیه‌سازی با موفقیت انجام شد</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+            دستورات زیر دقیقاً دستوراتی هستند که در حالت واقعی به پورت API / ترمینال میکروتیک ارسال می‌شوند:
+        </p>
+        <div class="code-block" id="resultCode"></div>
+        <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+            <button class="btn btn-primary" onclick="closeModal('resultModal'); window.location.reload();">تأیید و بازگشت به داشبورد</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Tunnels List -->
+<div id="tunnelsModal" class="modal">
+    <div class="modal-content" style="max-width: 650px;">
+        <h3 id="tunServerTitle" style="margin-bottom: 1rem;">تونل‌های فعال</h3>
+        <div id="tunListContent" style="font-size: 0.9rem;"></div>
+        <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+            <button class="btn btn-secondary" onclick="closeModal('tunnelsModal')">بستن</button>
+        </div>
     </div>
 </div>
 
@@ -160,7 +237,7 @@ function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 async function submitServer(e) {
     e.preventDefault();
     const data = {
-        id: document.getElementById('dst_name') ? document.getElementById('srv_name').value.toLowerCase().replace(/\s+/g, '-') : 'srv',
+        id: 'srv-' + Math.random().toString(36).substring(2, 7),
         name: document.getElementById('srv_name').value,
         host: document.getElementById('srv_host').value,
         api_port: parseInt(document.getElementById('srv_api_port').value),
@@ -191,15 +268,63 @@ async function submitDestination(e) {
         enable_killswitch: true,
         bypass_iran: true
     };
-    alert('در حال ارسال کانفیگ به سرورها...');
+    
+    closeModal('addDestModal');
     const res = await fetch('/api/fleet/destinations', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
     });
     const result = await res.json();
-    alert('نتیجه: ' + JSON.stringify(result));
-    closeModal('addDestModal');
+    
+    // Extract generated commands from response
+    let allCmds = [];
+    for (let srv in result) {
+        if (result[srv].result && result[srv].result.generated_commands) {
+            allCmds = result[srv].result.generated_commands;
+            break;
+        }
+    }
+    
+    document.getElementById('resultTitle').innerText = '✅ کشور ' + data.country_label + ' با موفقیت به تمام سرورها اضافه شد!';
+    document.getElementById('resultCode').innerText = allCmds.join('
+');
+    openModal('resultModal');
+}
+
+async function viewServerTunnels(id, name) {
+    document.getElementById('tunServerTitle').innerText = 'تونل‌های سرور ' + name;
+    const res = await fetch('/api/servers/' + id + '/destinations');
+    const tunnels = await res.json();
+    let html = '<table style="width: 100%; border-collapse: collapse; text-align: right;">';
+    html += '<tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted);"><th>نام تونل</th><th>IP ریموت</th><th>وضعیت</th></tr>';
+    tunnels.forEach(t => {
+        html += '<tr style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 8px 0;">';
+        html += '<td style="padding: 8px 0;"><code>' + t.name + '</code></td>';
+        html += '<td>' + t.remote_address + '</td>';
+        html += '<td><span class="status-badge badge-online">فعال</span></td>';
+        html += '</tr>';
+    });
+    html += '</table>';
+    document.getElementById('tunListContent').innerHTML = html;
+    openModal('tunnelsModal');
+}
+
+async function showLogsModal() {
+    const res = await fetch('/api/commands-log');
+    const logs = await res.json();
+    if (logs.length === 0) {
+        alert('هنوز دستوری ثبت نشده است. ابتدا یک کشور جدید تست کنید!');
+        return;
+    }
+    let all = logs.map(l => '# --- سرور ' + l.server + ' برای کشور ' + l.destination + ' ---
+' + l.commands.join('
+')).join('
+
+');
+    document.getElementById('resultTitle').innerText = '📜 لاگ تمام دستورات تولیدشده میکروتیک';
+    document.getElementById('resultCode').innerText = all;
+    openModal('resultModal');
 }
 
 async function deleteServer(id) {

@@ -65,7 +65,7 @@ async def list_destinations(server_id: str):
     server = fleet_service.get_server(server_id)
     if not server:
         raise HTTPException(status_code=404, detail="Server not found")
-    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl) as client:
+    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
         return client.list_destinations()
 
 @app.post("/api/servers/{server_id}/destinations")
@@ -73,7 +73,7 @@ async def add_destination_to_server(server_id: str, dest: DestinationConfig):
     server = fleet_service.get_server(server_id)
     if not server:
         raise HTTPException(status_code=404, detail="Server not found")
-    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl) as client:
+    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
         return client.add_destination_atomic(dest)
 
 @app.post("/api/fleet/destinations")
@@ -95,5 +95,10 @@ async def delete_destination(server_id: str, name: str):
     server = fleet_service.get_server(server_id)
     if not server:
         raise HTTPException(status_code=404, detail="Server not found")
-    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl) as client:
+    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
         return client.remove_destination(name)
+
+
+@app.get("/api/commands-log")
+async def get_commands_log():
+    return RouterOSClient.get_command_logs()

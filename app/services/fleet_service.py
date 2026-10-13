@@ -59,7 +59,7 @@ class FleetService:
             return ServerStatus(id=server_id, name="Not Found", host="", online=False, error_message="Server not found")
 
         try:
-            with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl) as client:
+            with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
                 data = client.get_system_summary()
                 return ServerStatus(
                     id=server.id,

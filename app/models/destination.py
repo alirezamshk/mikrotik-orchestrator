@@ -18,6 +18,7 @@ class DestinationConfig(BaseModel):
     
     # OpenVPN server instance for this country
     ovpn_port: int = Field(..., description="Dedicated UDP port for this country, e.g. 6066")
+    ovpn_protocol: str = Field(default="udp", description="Protocol: udp or tcp")
     ovpn_certificate: str = Field(default="server-template", description="Certificate name in router")
     
     # Routing & Killswitch
