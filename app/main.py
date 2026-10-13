@@ -128,3 +128,82 @@ async def sync_iran_ips(server_id: str):
         raise HTTPException(status_code=404, detail="Server not found")
     with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
         return client.setup_iran_ipdeny()
+
+from pydantic import BaseModel
+from typing import List, Optional
+
+class WizardPayload(BaseModel):
+    server_name: str
+    server_host: str
+    api_port: int = 8728
+    username: str = "admin"
+    password: str = ""
+    winbox_port: int = 2020
+    cert_mode: str = "self_signed" # "self_signed" or "upload"
+    cert_name: str = "server-template"
+    cert_content: Optional[str] = ""
+    key_content: Optional[str] = ""
+    radius_ip: str = "91.199.27.107"
+    radius_secret: str = "radius_secret"
+    ikev2_pool: str = "10.0.0.2-10.0.0.254"
+    enable_iran_fetch: bool = True
+    destinations: List[DestinationConfig] = []
+
+@app.post("/api/wizard/apply")
+async def apply_wizard_setup(payload: WizardPayload):
+    # 1. Register server
+    server_id = "srv-" + payload.server_name.lower().replace(" ", "-")
+    cred = ServerCredentials(
+        id=server_id,
+        name=payload.server_name,
+        host=payload.server_host,
+        api_port=payload.api_port,
+        username=payload.username,
+        password=payload.password,
+        winbox_port=payload.winbox_port
+    )
+    fleet_service.add_or_update_server(cred)
+
+    all_commands = [f"# --- شروع کانفیگ ویزارد برای سرور {payload.server_name} ---"]
+    
+    with RouterOSClient(cred.host, cred.username, cred.password, cred.api_port, cred.use_ssl, server_id=server_id) as client:
+        # 2. Certificate
+        if payload.cert_mode == "self_signed":
+            c_res = client.generate_self_signed_cert(cert_name=payload.cert_name)
+            all_commands.extend(c_res.get("commands", []))
+        elif payload.cert_mode == "upload" and payload.cert_content and payload.key_content:
+            c_res = client.upload_and_import_cert(payload.cert_name, payload.cert_content, payload.key_content)
+            all_commands.extend(c_res.get("commands", []))
+
+        # 3. Base & RADIUS & IKEv2 commands
+        base_cmds = [
+            f"/radius add address={payload.radius_ip} service=ppp,ipsec secret=\"{payload.radius_secret}\"",
+            "/radius incoming set accept=yes",
+            "/ppp aaa set use-radius=yes interim-update=30s",
+            "/ip ipsec settings set xauth-use-radius=yes",
+            f"/ip pool add name=IKEV2 ranges={payload.ikev2_pool}",
+            f"/ip ipsec mode-config add name=ikev2 address-pool=IKEV2 address-prefix-length=32 static-dns=8.8.8.8,8.8.4.4",
+            f"/ip ipsec identity add auth-method=eap-radius certificate={payload.cert_name} mode-config=ikev2 generate-policy=port-strict",
+            f"/ip service set winbox port={payload.winbox_port}",
+            "/ip firewall mangle add chain=forward action=change-mss new-mss=clamp-to-pmtu protocol=tcp tcp-flags=syn"
+        ]
+        all_commands.extend(base_cmds)
+
+        # 4. Iran IPDeny
+        if payload.enable_iran_fetch:
+            iran_res = client.setup_iran_ipdeny()
+            all_commands.extend(iran_res.get("commands", []))
+
+        # 5. Outbound Destinations
+        for dest in payload.destinations:
+            d_res = client.add_destination_atomic(dest)
+            all_commands.extend(d_res.get("generated_commands", []))
+
+    return {
+        "status": "success",
+        "server_id": server_id,
+        "server_name": payload.server_name,
+        "commands_count": len(all_commands),
+        "generated_commands": all_commands,
+        "message": f"ویزارد با موفقیت تمام مراحل را برای سرور {payload.server_name} اجرا کرد."
+    }

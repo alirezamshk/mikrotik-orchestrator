@@ -90,7 +90,8 @@
     <div class="actions-bar">
         <h2>سرورهای ناوگان میکروتیک</h2>
         <div style="display: flex; gap: 10px;">
-            <button class="btn btn-primary" onclick="openModal('addDestModal')">🌍 + افزودن مسیر کشور جدید</button>
+            <button class="btn btn-primary" style="background: linear-gradient(135deg, #38bdf8, #818cf8); color: #000; font-weight: 700;" onclick="openWizardModal()">🚀 ویزارد راه‌اندازی سرور جدید (Step-by-Step)</button>
+            <button class="btn btn-secondary" onclick="openModal('addDestModal')">🌍 + افزودن کشور</button>
             <button class="btn btn-secondary" onclick="openModal('addServerModal')">+ افزودن سرور به لیست</button>
         </div>
     </div>
@@ -319,5 +320,188 @@
 </div>
 
 <script src="/static/js/app.js"></script>
+
+<!-- Modal: Step-by-Step Server Setup Wizard -->
+<div id="wizardModal" class="modal">
+    <div class="modal-content" style="max-width: 780px;">
+        <h2 style="font-size: 1.4rem; margin-bottom: 0.5rem; color: var(--accent);">🚀 ویزارد راه‌اندازی صفر تا صد روتر میکروتیک</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+            با طی کردن مراحل زیر، تمام کانفیگ‌های پایه، سرتیفیکت، رادیوس، IKEv2، منگل و تونل‌ها به صورت یکپارچه ست می‌شوند.
+        </p>
+
+        <!-- Stepper Indicators -->
+        <div class="wizard-stepper">
+            <div class="step-indicator active" id="stepInd1">
+                <div class="step-circle">۱</div>
+                <div class="step-title">اتصال روتر</div>
+            </div>
+            <div class="step-indicator" id="stepInd2">
+                <div class="step-circle">۲</div>
+                <div class="step-title">سرتیفیکت</div>
+            </div>
+            <div class="step-indicator" id="stepInd3">
+                <div class="step-circle">۳</div>
+                <div class="step-title">رادیوس و IKEv2</div>
+            </div>
+            <div class="step-indicator" id="stepInd4">
+                <div class="step-circle">۴</div>
+                <div class="step-title">تونل‌های خروجی</div>
+            </div>
+            <div class="step-indicator" id="stepInd5">
+                <div class="step-circle">۵</div>
+                <div class="step-title">اعمال نهایی</div>
+            </div>
+        </div>
+
+        <form id="wizardForm" onsubmit="submitWizard(event)">
+            <!-- Step 1: Server Info -->
+            <div class="wizard-step-content active" id="wizardStep1">
+                <h4 style="margin-bottom: 1rem;">گام ۱: مشخصات و اطلاعات اتصال روتر</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>نام سرور (Identity)</label>
+                        <input type="text" id="wiz_name" value="CHR-Production-New" required>
+                    </div>
+                    <div class="form-group">
+                        <label>آدرس IP سرور</label>
+                        <input type="text" id="wiz_host" value="95.216.100.50" required>
+                    </div>
+                    <div class="form-group">
+                        <label>پورت API میکروتیک</label>
+                        <input type="number" id="wiz_api_port" value="8728" required>
+                    </div>
+                    <div class="form-group">
+                        <label>پورت امن Winbox</label>
+                        <input type="number" id="wiz_winbox_port" value="2020" required>
+                    </div>
+                    <div class="form-group">
+                        <label>نام کاربری</label>
+                        <input type="text" id="wiz_user" value="admin" required>
+                    </div>
+                    <div class="form-group">
+                        <label>رمز عبور</label>
+                        <input type="password" id="wiz_pass" value="strong_pass" placeholder="رمز عبور میکروتیک">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Certificate -->
+            <div class="wizard-step-content" id="wizardStep2">
+                <h4 style="margin-bottom: 1rem;">گام ۲: تنظیمات سرتیفیکت SSL/TLS</h4>
+                <div class="form-group" style="background: #0f1422; padding: 12px; border-radius: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fff;">
+                        <input type="radio" name="wiz_cert_mode" value="self_signed" checked onchange="document.getElementById('wiz_upload_box').style.display = 'none';">
+                        <strong>روش پیشنهادی: ساخت و امضای خودکار روی خود روتر (Self-Signed CA + server-template)</strong>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fff; margin-top: 10px;">
+                        <input type="radio" name="wiz_cert_mode" value="upload" onchange="document.getElementById('wiz_upload_box').style.display = 'block';">
+                        <strong>روش دوم: آپلود فایل‌های سرتیفیکت اختصاصی (.crt / .key)</strong>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>نام سرتیفیکت در روتر</label>
+                    <input type="text" id="wiz_cert_name" value="server-template" required>
+                </div>
+                <div id="wiz_upload_box" style="display: none;">
+                    <div class="form-group">
+                        <label>محتوای سرتیفیکت CRT/PEM</label>
+                        <textarea id="wiz_cert_content" style="width: 100%; height: 70px; background: #0f1422; color: #fff; border: 1px solid var(--border-color); border-radius: 8px; font-family: monospace; font-size: 0.8rem; padding: 8px;"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>محتوای کلید خصوصی KEY</label>
+                        <textarea id="wiz_key_content" style="width: 100%; height: 70px; background: #0f1422; color: #fff; border: 1px solid var(--border-color); border-radius: 8px; font-family: monospace; font-size: 0.8rem; padding: 8px;"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: RADIUS & Services -->
+            <div class="wizard-step-content" id="wizardStep3">
+                <h4 style="margin-bottom: 1rem;">گام ۳: تنظیمات احراز هویت مرکزی و فایروال</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>IP سرور RADIUS</label>
+                        <input type="text" id="wiz_radius_ip" value="91.199.27.107" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Secret سرور RADIUS</label>
+                        <input type="text" id="wiz_radius_secret" value="radius_secret_123" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>استخر آی‌پی کاربران IKEv2</label>
+                    <input type="text" id="wiz_ikev2_pool" value="10.0.0.2-10.0.0.254" required>
+                </div>
+                <div class="form-group" style="background: #0f1422; padding: 12px; border-radius: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; color: #fff; cursor: pointer;">
+                        <input type="checkbox" id="wiz_iran_check" checked>
+                        <span>🇮🇷 نصب اسکریپت خودکار IPDeny ایران و زمان‌بندی روزانه (ساعت ۴ صبح)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Step 4: Outbound Tunnels -->
+            <div class="wizard-step-content" id="wizardStep4">
+                <h4 style="margin-bottom: 0.5rem;">گام ۴: انتخاب تونل‌ها و مقاصد خروجی برای این سرور</h4>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                    کشورهایی که می‌خواهید به عنوان مسیر خروجی و پورت OpenVPN روی این روتر فعال شوند را تیک بزنید:
+                </p>
+                <div class="tunnel-choice-grid">
+                    <label class="tunnel-choice-item">
+                        <input type="checkbox" class="wiz-tun-check" value="de" data-label="آلمان (DE:6066)" checked>
+                        <span>🇩🇪 آلمان (GRE + OVPN 6066)</span>
+                    </label>
+                    <label class="tunnel-choice-item">
+                        <input type="checkbox" class="wiz-tun-check" value="usa" data-label="آمریکا (USA:6065)" checked>
+                        <span>🇺🇸 آمریکا (GRE + OVPN 6065)</span>
+                    </label>
+                    <label class="tunnel-choice-item">
+                        <input type="checkbox" class="wiz-tun-check" value="eng" data-label="انگلیس (UK:6060)" checked>
+                        <span>🇬🇧 انگلیس (GRE + OVPN 6060)</span>
+                    </label>
+                    <label class="tunnel-choice-item">
+                        <input type="checkbox" class="wiz-tun-check" value="nl" data-label="هلند (NL:6064)" checked>
+                        <span>🇳🇱 هلند (GRE + OVPN 6064)</span>
+                    </label>
+                    <label class="tunnel-choice-item">
+                        <input type="checkbox" class="wiz-tun-check" value="fin" data-label="فنلاند (FIN:6059)" checked>
+                        <span>🇫🇮 فنلاند (GRE + OVPN 6059)</span>
+                    </label>
+                    <label class="tunnel-choice-item">
+                        <input type="checkbox" class="wiz-tun-check" value="pol" data-label="لهستان (POL:6063)">
+                        <span>🇵🇱 لهستان (GRE + OVPN 6063)</span>
+                    </label>
+                    <label class="tunnel-choice-item">
+                        <input type="checkbox" class="wiz-tun-check" value="ca" data-label="کانادا (CA:6067)">
+                        <span>🇨🇦 کانادا (GRE + OVPN 6067)</span>
+                    </label>
+                    <label class="tunnel-choice-item">
+                        <input type="checkbox" class="wiz-tun-check" value="trk" data-label="ترکیه (TRK:6058)">
+                        <span>🇹🇷 ترکیه (GRE + OVPN 6058)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Step 5: Review & Submit -->
+            <div class="wizard-step-content" id="wizardStep5">
+                <h4 style="margin-bottom: 0.5rem; color: var(--accent);">گام ۵: بازبینی و اجرای نهایی ویزارد</h4>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                    خلاصه مواردی که با زدن دکمه زیر به صورت یکپارچه روی میکروتیک پیکربندی می‌شوند:
+                </p>
+                <div id="wizardSummaryBox" style="background: #0f1422; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; font-size: 0.9rem; line-height: 1.8;"></div>
+            </div>
+
+            <!-- Wizard Navigation Buttons -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1.2rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('wizardModal')">انصراف و خروج</button>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" id="btnWizardPrev" style="display: none;" onclick="wizardPrev()">⬅ مرحله قبل</button>
+                    <button type="button" class="btn btn-primary" id="btnWizardNext" onclick="wizardNext()">مرحله بعد ➡</button>
+                    <button type="submit" class="btn btn-primary" id="btnWizardSubmit" style="display: none; background: var(--success); color: #000; font-weight: 700;">🚀 اجرای ویزارد و کانفیگ سرور</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 </body>
 </html>

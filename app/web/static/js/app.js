@@ -207,3 +207,141 @@ async function deleteServer(id) {
         window.location.reload();
     }
 }
+
+// --- WIZARD LOGIC ---
+let currentWizardStep = 1;
+const totalWizardSteps = 5;
+
+function openWizardModal() {
+    currentWizardStep = 1;
+    updateWizardUI();
+    openModal('wizardModal');
+}
+
+function updateWizardUI() {
+    for (let i = 1; i <= totalWizardSteps; i++) {
+        const content = document.getElementById('wizardStep' + i);
+        const indicator = document.getElementById('stepInd' + i);
+        if (content) {
+            content.classList.toggle('active', i === currentWizardStep);
+        }
+        if (indicator) {
+            indicator.classList.toggle('active', i === currentWizardStep);
+            indicator.classList.toggle('completed', i < currentWizardStep);
+        }
+    }
+    
+    const prevBtn = document.getElementById('btnWizardPrev');
+    const nextBtn = document.getElementById('btnWizardNext');
+    const submitBtn = document.getElementById('btnWizardSubmit');
+    
+    if (prevBtn) prevBtn.style.display = currentWizardStep > 1 ? 'inline-flex' : 'none';
+    if (nextBtn) nextBtn.style.display = currentWizardStep < totalWizardSteps ? 'inline-flex' : 'none';
+    if (submitBtn) submitBtn.style.display = currentWizardStep === totalWizardSteps ? 'inline-flex' : 'none';
+    
+    if (currentWizardStep === 5) {
+        updateWizardSummary();
+    }
+}
+
+function wizardNext() {
+    if (currentWizardStep === 1) {
+        const name = document.getElementById('wiz_name').value.trim();
+        const host = document.getElementById('wiz_host').value.trim();
+        if (!name || !host) {
+            alert('لطفاً نام و آدرس IP سرور را وارد کنید.');
+            return;
+        }
+    }
+    if (currentWizardStep < totalWizardSteps) {
+        currentWizardStep++;
+        updateWizardUI();
+    }
+}
+
+function wizardPrev() {
+    if (currentWizardStep > 1) {
+        currentWizardStep--;
+        updateWizardUI();
+    }
+}
+
+function updateWizardSummary() {
+    const name = document.getElementById('wiz_name').value;
+    const host = document.getElementById('wiz_host').value;
+    const certMode = document.querySelector('input[name="wiz_cert_mode"]:checked').value;
+    const radiusIp = document.getElementById('wiz_radius_ip').value;
+    
+    const selectedTunnels = [];
+    document.querySelectorAll('.wiz-tun-check:checked').forEach(c => {
+        selectedTunnels.push(c.dataset.label);
+    });
+    
+    let html = '<ul style="padding-right: 20px;">';
+    html += '<li><strong>نام و IP سرور:</strong> ' + name + ' (' + host + ')</li>';
+    html += '<li><strong>نحوه سرتیفیکت:</strong> ' + (certMode === 'self_signed' ? 'تولید و Sign خودکار روی میکروتیک (Self-Signed)' : 'آپلود فایل‌های CRT / Key') + '</li>';
+    html += '<li><strong>احراز هویت RADIUS:</strong> ' + radiusIp + ' + EAP-RADIUS برای IKEv2</li>';
+    html += '<li><strong>اسکریپت IPDeny ایران:</strong> دانلود خودکار و Scheduler روزانه فعال</li>';
+    html += '<li><strong>کشورها و تونل‌های انتخابی (' + selectedTunnels.length + ' مورد):</strong> ' + (selectedTunnels.join(', ') || 'هیچکدام') + '</li>';
+    html += '</ul>';
+    
+    document.getElementById('wizardSummaryBox').innerHTML = html;
+}
+
+const PRESET_DESTINATIONS = {
+    'de': { name: 'de', country_label: 'Germany', tunnel_type: 'gre', remote_ip: '91.99.129.82', tunnel_local_ip: '40.40.40.2/30', tunnel_remote_ip: '40.40.40.1', ovpn_port: 6066, ovpn_protocol: 'udp', client_pool_range: '10.18.1.2-10.18.1.200', client_gateway_ip: '10.18.1.1', client_subnet: '10.18.1.0/24', enable_killswitch: true, bypass_iran: true },
+    'usa': { name: 'usa', country_label: 'United States', tunnel_type: 'gre', remote_ip: '69.197.190.75', tunnel_local_ip: '10.10.11.2/30', tunnel_remote_ip: '10.10.11.1', ovpn_port: 6065, ovpn_protocol: 'udp', client_pool_range: '10.17.1.2-10.17.1.200', client_gateway_ip: '10.17.1.1', client_subnet: '10.17.1.0/24', enable_killswitch: true, bypass_iran: true },
+    'eng': { name: 'eng', country_label: 'United Kingdom', tunnel_type: 'gre', remote_ip: '51.38.66.183', tunnel_local_ip: '10.10.3.2/30', tunnel_remote_ip: '10.10.3.1', ovpn_port: 6060, ovpn_protocol: 'udp', client_pool_range: '10.16.1.2-10.16.1.200', client_gateway_ip: '10.16.1.1', client_subnet: '10.16.1.0/24', enable_killswitch: true, bypass_iran: true },
+    'nl': { name: 'nl', country_label: 'Netherlands', tunnel_type: 'gre', remote_ip: '94.102.57.228', tunnel_local_ip: '10.10.7.2/30', tunnel_remote_ip: '10.10.7.1', ovpn_port: 6064, ovpn_protocol: 'udp', client_pool_range: '10.15.1.2-10.15.1.200', client_gateway_ip: '10.15.1.1', client_subnet: '10.15.1.0/24', enable_killswitch: true, bypass_iran: true },
+    'pol': { name: 'pol', country_label: 'Poland', tunnel_type: 'gre', remote_ip: '51.77.38.238', tunnel_local_ip: '10.10.4.2/30', tunnel_remote_ip: '10.10.4.1', ovpn_port: 6063, ovpn_protocol: 'udp', client_pool_range: '10.13.1.2-10.13.1.200', client_gateway_ip: '10.13.1.1', client_subnet: '10.13.1.0/24', enable_killswitch: true, bypass_iran: true },
+    'fin': { name: 'fin', country_label: 'Finland', tunnel_type: 'gre', remote_ip: '65.108.18.128', tunnel_local_ip: '10.10.2.2/30', tunnel_remote_ip: '10.10.2.1', ovpn_port: 6059, ovpn_protocol: 'udp', client_pool_range: '10.12.1.2-10.12.1.200', client_gateway_ip: '10.12.1.1', client_subnet: '10.12.1.0/24', enable_killswitch: true, bypass_iran: true },
+    'ca': { name: 'ca', country_label: 'Canada', tunnel_type: 'gre', remote_ip: '67.55.2.40', tunnel_local_ip: '20.20.3.2/30', tunnel_remote_ip: '20.20.3.1', ovpn_port: 6067, ovpn_protocol: 'udp', client_pool_range: '10.19.1.2-10.19.1.200', client_gateway_ip: '10.19.1.1', client_subnet: '10.19.1.0/24', enable_killswitch: true, bypass_iran: true },
+    'trk': { name: 'trk', country_label: 'Turkey', tunnel_type: 'gre', remote_ip: '188.132.174.132', tunnel_local_ip: '10.10.12.2/30', tunnel_remote_ip: '10.10.12.1', ovpn_port: 6058, ovpn_protocol: 'udp', client_pool_range: '10.11.1.2-10.11.1.200', client_gateway_ip: '10.11.1.1', client_subnet: '10.11.1.0/24', enable_killswitch: true, bypass_iran: true }
+};
+
+async function submitWizard(e) {
+    e.preventDefault();
+    
+    const selectedDests = [];
+    document.querySelectorAll('.wiz-tun-check:checked').forEach(c => {
+        const key = c.value;
+        if (PRESET_DESTINATIONS[key]) {
+            selectedDests.push(PRESET_DESTINATIONS[key]);
+        }
+    });
+    
+    const payload = {
+        server_name: document.getElementById('wiz_name').value.trim(),
+        server_host: document.getElementById('wiz_host').value.trim(),
+        api_port: parseInt(document.getElementById('wiz_api_port').value),
+        username: document.getElementById('wiz_user').value.trim(),
+        password: document.getElementById('wiz_pass').value,
+        winbox_port: parseInt(document.getElementById('wiz_winbox_port').value),
+        cert_mode: document.querySelector('input[name="wiz_cert_mode"]:checked').value,
+        cert_name: document.getElementById('wiz_cert_name').value.trim(),
+        cert_content: document.getElementById('wiz_cert_content').value.trim(),
+        key_content: document.getElementById('wiz_key_content').value.trim(),
+        radius_ip: document.getElementById('wiz_radius_ip').value.trim(),
+        radius_secret: document.getElementById('wiz_radius_secret').value,
+        ikev2_pool: document.getElementById('wiz_ikev2_pool').value.trim(),
+        enable_iran_fetch: document.getElementById('wiz_iran_check').checked,
+        destinations: selectedDests
+    };
+    
+    closeModal('wizardModal');
+    
+    try {
+        const res = await fetch('/api/wizard/apply', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        
+        document.getElementById('resultTitle').innerText = '🎉 ویزارد با موفقیت سرور ' + payload.server_name + ' را کانفیگ کرد!';
+        document.getElementById('resultCode').innerText = result.generated_commands.join('\n');
+        openModal('resultModal');
+    } catch (err) {
+        alert('خطا در اجرای ویزارد: ' + err.message);
+    }
+}
