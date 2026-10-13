@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*.class
+.venv/
+env/
+venv/
+*.log
+.DS_Store
+data/servers.json
+.env
