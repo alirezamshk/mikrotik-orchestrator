@@ -514,10 +514,7 @@ async function executeBatchCustomCountries() {
         allExecutedWizardCommands.push(...data.commands);
         addedDestinationsList.push(...selectedDests);
 
-        consoleBox.innerText += '✅ ' + data.message + '
-
-' + data.commands.join('
-');
+        consoleBox.innerText += '✅ ' + data.message + '\n\n' + data.commands.join('\n');
         btn.innerText = `✅ تعداد ${selectedDests.length} کشور با موفقیت ساخته شد`;
         btn.style.background = 'var(--success)';
         btn.style.color = '#000';
@@ -552,8 +549,7 @@ async function executeStep1WithScan() {
     btn.disabled = true;
     btn.innerText = '⏳ در حال تست اتصال به میکروتیک...';
     consoleBox.style.display = 'block';
-    consoleBox.innerText = '# [1/4] در حال برقراری ارتباط با پورت API روتر (8728)...
-';
+    consoleBox.innerText = '# [1/4] در حال برقراری ارتباط با پورت API روتر (8728)...\n';
     alertBox.style.display = 'none';
 
     const selectedFleetId = document.getElementById('wiz_fleet_select').value;
@@ -579,13 +575,8 @@ async function executeStep1WithScan() {
         wizServerName = data.server_name;
         allExecutedWizardCommands.push(...data.commands);
 
-        consoleBox.innerText += '✅ اتصال برقرار شد! اطلاعات روتر:
-' + data.commands.join('
-') + '
-
-';
-        consoleBox.innerText += '# [2/4] در حال اسکن خودکار سرتیفیکت‌ها و اینترفیس‌های موجود در روتر...
-';
+        consoleBox.innerText += '✅ اتصال برقرار شد! اطلاعات روتر:\n' + data.commands.join('\n') + '\n\n';
+        consoleBox.innerText += '# [2/4] در حال اسکن خودکار سرتیفیکت‌ها و اینترفیس‌های موجود در روتر...\n';
 
         // Auto Scan Certs
         try {
@@ -609,8 +600,7 @@ async function executeStep1WithScan() {
                 document.getElementById('wiz_found_cert_notice').style.display = 'none';
                 document.getElementById('rad_cert_self_signed').checked = true;
                 toggleCertModeFields();
-                consoleBox.innerText += 'ℹ️ سرتیفیکت قبلی روی روتر یافت نشد؛ حالت ساخت خودکار انتخاب شد.
-';
+                consoleBox.innerText += 'ℹ️ سرتیفیکت قبلی روی روتر یافت نشد؛ حالت ساخت خودکار انتخاب شد.\n';
             }
         } catch (e) {
             console.error('Cert scan err', e);
@@ -629,8 +619,7 @@ async function executeStep1WithScan() {
                 alertBox.style.color = 'var(--success)';
                 alertBox.innerHTML = `💡 <strong>کشف خودکار:</strong> تعداد ${detectedTunnelsList.length} تونل موجود روی روتر شناسایی شد (${detectedTunnelsList.map(t=>'<code>'+t.name+'</code>').join(', ')}).`;
             } else {
-                consoleBox.innerText += 'ℹ️ هیچ اینترفیس تونل GRE یا L2TP از قبل روی روتر تعریف نشده است (روتر خام).
-';
+                consoleBox.innerText += 'ℹ️ هیچ اینترفیس تونل GRE یا L2TP از قبل روی روتر تعریف نشده است (روتر خام).\n';
             }
         } catch (e) {
             console.error('Tunnel scan err', e);
@@ -691,10 +680,7 @@ async function executeStep2Cert() {
         const data = await res.json();
         allExecutedWizardCommands.push(...data.commands);
 
-        consoleBox.innerText = '✅ ' + data.message + '
-
-' + data.commands.join('
-');
+        consoleBox.innerText = '✅ ' + data.message + '\n\n' + data.commands.join('\n');
         btn.innerText = '✅ گام ۲ انجام شد';
         btn.style.background = 'var(--success)';
         btn.style.color = '#000';
@@ -735,10 +721,7 @@ async function executeStep3Services() {
         const data = await res.json();
         allExecutedWizardCommands.push(...data.commands);
 
-        consoleBox.innerText = '✅ ' + data.message + '
-
-' + data.commands.join('
-');
+        consoleBox.innerText = '✅ ' + data.message + '\n\n' + data.commands.join('\n');
         btn.innerText = '✅ گام ۳ انجام شد';
         btn.style.background = 'var(--success)';
         btn.style.color = '#000';
@@ -788,8 +771,7 @@ async function executeStep4AddTunnel() {
     };
 
     consoleBox.style.display = 'block';
-    consoleBox.innerText = '⏳ در حال ساخت تونل اختصاصی...
-';
+    consoleBox.innerText = '⏳ در حال ساخت تونل اختصاصی...\n';
 
     try {
         const res = await fetch('/api/wizard/step4-tunnel', {
@@ -801,10 +783,7 @@ async function executeStep4AddTunnel() {
         allExecutedWizardCommands.push(...data.commands);
         addedDestinationsList.push(dest);
 
-        consoleBox.innerText = '✅ ' + data.message + '
-
-' + data.commands.join('
-');
+        consoleBox.innerText = '✅ ' + data.message + '\n\n' + data.commands.join('\n');
         
         const badge = document.createElement('span');
         badge.className = 'tag-pill';
@@ -898,10 +877,7 @@ async function adoptSingleTunnel(idx, tunName, tunType, defaultGw) {
         allExecutedWizardCommands.push(...data.commands);
 
         consoleBox.style.display = 'block';
-        consoleBox.innerText = '✅ ' + data.message + '
-
-' + data.commands.join('
-');
+        consoleBox.innerText = '✅ ' + data.message + '\n\n' + data.commands.join('\n');
         btn.innerText = '✅ همگام شد';
         btn.style.background = 'var(--success)';
         btn.style.color = '#000';
