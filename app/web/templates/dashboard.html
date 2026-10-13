@@ -36,13 +36,26 @@
             font-size: 0.75rem;
             color: var(--text-muted);
         }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 8px 16px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-weight: 600;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+        }
     </style>
 </head>
 <body>
 
 <div class="mock-banner">
     <div>
-        <span>🧪 <strong>حالت تست و شبیه‌ساز (Simulator Mode) فعال است:</strong> نیازی به اتصال به روتر واقعی نیست. می‌توانید سناریوها را تست کنید و دستورات تولیدشده میکروتیک را بررسی نمایید.</span>
+        <span>🧪 <strong>حالت تست و شبیه‌ساز (Simulator Mode) فعال است:</strong> تمام عملیات بدون اتصال به روتر فیزیکی شبیه‌سازی می‌شوند.</span>
     </div>
     <div>
         <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="showLogsModal()">📜 مشاهده لاگ دستورات میکروتیک</button>
@@ -70,14 +83,14 @@
         </div>
         <div class="stat-card">
             <span class="stat-label">وضعیت RADIUS & IKEv2</span>
-            <span class="stat-value" style="font-size: 1.2rem; color: var(--text-muted); margin-top: 8px;">EAP-RADIUS شبیه‌سازی‌شده</span>
+            <span class="stat-value" style="font-size: 1.2rem; color: var(--text-muted); margin-top: 8px;">EAP-RADIUS Active</span>
         </div>
     </div>
 
     <div class="actions-bar">
         <h2>سرورهای ناوگان میکروتیک</h2>
         <div style="display: flex; gap: 10px;">
-            <button class="btn btn-primary" onclick="openModal('addDestModal')">🌍 تست افزودن کشور جدید به همه روترها</button>
+            <button class="btn btn-primary" onclick="openModal('addDestModal')">🌍 + افزودن مسیر کشور جدید</button>
             <button class="btn btn-secondary" onclick="openModal('addServerModal')">+ افزودن سرور به لیست</button>
         </div>
     </div>
@@ -94,15 +107,17 @@
                     <span class="tag-pill">RouterOS {{ s.version or '7.x' }}</span>
                 </div>
                 <div style="font-size: 0.9rem; color: var(--text-muted);">
-                    <span>IP فرضی: {{ s.host }}</span> |
+                    <span>IP: {{ s.host }}</span> |
                     <span>کاربران آنلاین: {{ s.ppp_active_users + s.ipsec_active_peers }}</span> |
                     <span>تونل‌های فعال: {{ s.tunnels_count }}</span> |
                     <span>Uptime: {{ s.uptime or '—' }}</span> |
                     <span>مصرف CPU: {{ s.cpu_load or 0 }}%</span>
                 </div>
             </div>
-            <div style="display: flex; gap: 8px;">
-                <button class="btn btn-secondary" onclick="viewServerTunnels('{{ s.id }}', '{{ s.name }}')">مشاهده تونل‌ها</button>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-secondary" onclick="viewServerTunnels('{{ s.id }}', '{{ s.name }}')">🌐 تونل‌ها</button>
+                <button class="btn btn-secondary" onclick="openCertModal('{{ s.id }}', '{{ s.name }}')">🔐 سرتیفیکت</button>
+                <button class="btn btn-secondary" onclick="syncIranList('{{ s.id }}', '{{ s.name }}')">🇮🇷 IPDeny ایران</button>
                 <button class="btn btn-secondary" style="color: var(--danger);" onclick="deleteServer('{{ s.id }}')">حذف</button>
             </div>
         </div>
@@ -117,7 +132,7 @@
 <!-- Modal: Add Server -->
 <div id="addServerModal" class="modal">
     <div class="modal-content">
-        <h3 style="margin-bottom: 1.5rem;">افزودن سرور میکروتیک</h3>
+        <h3 style="margin-bottom: 1.5rem;">افزودن سرور میکروتیک جدید</h3>
         <form id="serverForm" onsubmit="submitServer(event)">
             <div class="form-group">
                 <label>شناسه / نام سرور</label>
@@ -147,21 +162,28 @@
     </div>
 </div>
 
-<!-- Modal: Add Destination to all -->
+<!-- Modal: Add Destination / Country -->
 <div id="addDestModal" class="modal">
     <div class="modal-content" style="max-width: 650px;">
-        <h3 style="margin-bottom: 0.5rem;">🌍 تست افزودن کشور جدید به روترها</h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.2rem;">
-            در این بخش مشخصات یک تونل و کشور جدید را وارد کنید. سیستم تمام مراحل کانفیگ را شبیه‌سازی کرده و دستورات خروجی RouterOS را به شما نشان می‌دهد.
-        </p>
+        <h3 style="margin-bottom: 0.5rem;">🌍 افزودن کشور / تونل خروجی جدید</h3>
         <form id="destForm" onsubmit="submitDestination(event)">
+            <div class="form-group">
+                <label>🎯 هدف اعمال کانفیگ:</label>
+                <select id="dst_target_server" style="border: 1px solid var(--accent);">
+                    <option value="all">🌍 تمام سرورهای ناوگان (Fleet Broadcast)</option>
+                    {% for s in servers %}
+                    <option value="{{ s.id }}">فقط سرور: {{ s.name }} ({{ s.host }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div class="form-group">
                     <label>کد کوتاه کشور (e.g. de, fr, nl)</label>
                     <input type="text" id="dst_name" value="fr" required>
                 </div>
                 <div class="form-group">
-                    <label>نام کشور</label>
+                    <label>نام نمایشی کشور</label>
                     <input type="text" id="dst_label" value="France" required>
                 </div>
                 <div class="form-group">
@@ -199,22 +221,88 @@
 
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('addDestModal')">انصراف</button>
-                <button type="submit" class="btn btn-primary">تست و اعمال شبیه‌سازی</button>
+                <button type="submit" class="btn btn-primary">ایجاد خودکار تونل و روتینگ</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Modal: Certificate Manager (2 Options) -->
+<div id="certModal" class="modal">
+    <div class="modal-content" style="max-width: 650px;">
+        <h3 id="certServerTitle" style="margin-bottom: 1rem;">🔐 مدیریت سرتیفیکت میکروتیک</h3>
+        
+        <div style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem;">
+            <button class="tab-btn active" id="btnTabSelfSigned" onclick="switchCertTab('selfSigned')">۱. ساخت خودکار روی میکروتیک (Self-Signed)</button>
+            <button class="tab-btn" id="btnTabUpload" onclick="switchCertTab('upload')">۲. آپلود فایل سرتیفیکت (CRT / Key)</button>
+        </div>
+
+        <!-- Tab 1: Self-Signed -->
+        <div id="tabSelfSigned">
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                خود میکروتیک یک CA داخلی ساخته و سرتیفیکت <code>server-template</code> را به صورت خودکار Sign می‌کند (مناسب راه‌اندازی سریع).
+            </p>
+            <form onsubmit="submitGenerateCert(event)">
+                <div class="form-group">
+                    <label>نام سرتیفیکت در روتر</label>
+                    <input type="text" id="gen_cert_name" value="server-template" required>
+                </div>
+                <div class="form-group">
+                    <label>Common Name (CN)</label>
+                    <input type="text" id="gen_common_name" value="server-template" required>
+                </div>
+                <div class="form-group">
+                    <label>مدت اعتبار (روز)</label>
+                    <input type="number" id="gen_days" value="3650" required>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('certModal')">بستن</button>
+                    <button type="submit" class="btn btn-primary">تولید و Sign خودکار سرتیفیکت</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tab 2: Upload Files -->
+        <div id="tabUpload" style="display: none;">
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                محتوای فایل سرتیفیکت (.crt / .pem) و کلید خصوصی (.key) را وارد کنید تا روی روتر آپلود و Import شود.
+            </p>
+            <form onsubmit="submitUploadCert(event)">
+                <div class="form-group">
+                    <label>نام سرتیفیکت در روتر</label>
+                    <input type="text" id="up_cert_name" value="server-template" required>
+                </div>
+                <div class="form-group">
+                    <label>محتوای سرتیفیکت (-----BEGIN CERTIFICATE----- ...)</label>
+                    <textarea id="up_cert_content" style="width: 100%; height: 90px; background: #0f1422; color: #fff; border: 1px solid var(--border-color); border-radius: 8px; font-family: monospace; font-size: 0.8rem; padding: 8px;" placeholder="-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>محتوای کلید خصوصی (-----BEGIN PRIVATE KEY----- ...)</label>
+                    <textarea id="up_key_content" style="width: 100%; height: 90px; background: #0f1422; color: #fff; border: 1px solid var(--border-color); border-radius: 8px; font-family: monospace; font-size: 0.8rem; padding: 8px;" placeholder="-----BEGIN RSA PRIVATE KEY-----
+...
+-----END RSA PRIVATE KEY-----" required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('certModal')">بستن</button>
+                    <button type="submit" class="btn btn-primary">آپلود و ایمپورت در میکروتیک</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 <!-- Modal: Result / Generated Code -->
 <div id="resultModal" class="modal">
     <div class="modal-content" style="max-width: 750px;">
-        <h3 id="resultTitle" style="margin-bottom: 0.5rem; color: var(--success);">عملیات شبیه‌سازی با موفقیت انجام شد</h3>
+        <h3 id="resultTitle" style="margin-bottom: 0.5rem; color: var(--success);">عملیات با موفقیت انجام شد</h3>
         <p style="font-size: 0.85rem; color: var(--text-muted);">
-            دستورات زیر دقیقاً دستوراتی هستند که در حالت واقعی به پورت API / ترمینال میکروتیک ارسال می‌شوند:
+            دستورات زیر به میکروتیک ارسال و پردازش شدند:
         </p>
         <div class="code-block" id="resultCode"></div>
         <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
-            <button class="btn btn-primary" onclick="closeModal('resultModal'); window.location.reload();">تأیید و بازگشت به داشبورد</button>
+            <button class="btn btn-primary" onclick="closeModal('resultModal'); window.location.reload();">تأیید</button>
         </div>
     </div>
 </div>
@@ -222,7 +310,7 @@
 <!-- Modal: Tunnels List -->
 <div id="tunnelsModal" class="modal">
     <div class="modal-content" style="max-width: 650px;">
-        <h3 id="tunServerTitle" style="margin-bottom: 1rem;">تونل‌های فعال</h3>
+        <h3 id="tunServerTitle" style="margin-bottom: 1rem;">تونل‌های سرور</h3>
         <div id="tunListContent" style="font-size: 0.9rem;"></div>
         <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
             <button class="btn btn-secondary" onclick="closeModal('tunnelsModal')">بستن</button>

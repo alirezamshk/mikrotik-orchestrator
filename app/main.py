@@ -102,3 +102,29 @@ async def delete_destination(server_id: str, name: str):
 @app.get("/api/commands-log")
 async def get_commands_log():
     return RouterOSClient.get_command_logs()
+
+from app.models.certificate import GenerateCertRequest, UploadCertRequest
+
+@app.post("/api/servers/{server_id}/certificates/generate")
+async def generate_certificate(server_id: str, req: GenerateCertRequest):
+    server = fleet_service.get_server(server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
+        return client.generate_self_signed_cert(cert_name=req.cert_name, common_name=req.common_name, days=req.days_valid)
+
+@app.post("/api/servers/{server_id}/certificates/upload")
+async def upload_certificate(server_id: str, req: UploadCertRequest):
+    server = fleet_service.get_server(server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
+        return client.upload_and_import_cert(cert_name=req.cert_name, cert_content=req.cert_content, key_content=req.key_content)
+
+@app.post("/api/servers/{server_id}/sync-iran-ips")
+async def sync_iran_ips(server_id: str):
+    server = fleet_service.get_server(server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
+        return client.setup_iran_ipdeny()

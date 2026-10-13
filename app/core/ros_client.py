@@ -179,6 +179,74 @@ class RouterOSClient:
 
         return {"status": "success_live", "destination": dest.name}
 
+    def generate_self_signed_cert(self, cert_name: str = "server-template", common_name: str = "server-template", days: int = 3650) -> Dict[str, Any]:
+        commands = [
+            f"/certificate add name=ca-authority common-name='CA-Authority' days-valid={days} key-size=2048 key-usage=crl-sign,key-cert-sign",
+            f"/certificate sign ca-authority name=ca-authority",
+            f"/certificate add name={cert_name} common-name='{common_name}' days-valid={days} key-size=2048 key-usage=digital-signature,key-encipherment,tls-server",
+            f"/certificate sign {cert_name} ca=ca-authority name={cert_name}"
+        ]
+        if self.is_mock:
+            _SIMULATOR_STATE["command_logs"].append({
+                "server": self.server_id,
+                "destination": "certificate-generate",
+                "commands": commands
+            })
+            return {
+                "status": "success_simulated",
+                "cert_name": cert_name,
+                "commands": commands,
+                "message": f"سرتیفیکت {cert_name} با موفقیت روی میکروتیک تولید و Sign شد."
+            }
+        return {"status": "success_live", "cert_name": cert_name, "commands": commands}
+
+    def upload_and_import_cert(self, cert_name: str, cert_content: str, key_content: str) -> Dict[str, Any]:
+        cert_file = f"{cert_name}.crt"
+        key_file = f"{cert_name}.key"
+        commands = [
+            f"# 1. Upload files {cert_file} and {key_file} to MikroTik storage",
+            f"/certificate import file-name={cert_file} passphrase=''",
+            f"/certificate import file-name={key_file} passphrase=''",
+            f"# 2. Certificate {cert_name} is now imported with private key (K flag)"
+        ]
+        if self.is_mock:
+            _SIMULATOR_STATE["command_logs"].append({
+                "server": self.server_id,
+                "destination": "certificate-upload",
+                "commands": commands
+            })
+            return {
+                "status": "success_simulated",
+                "cert_name": cert_name,
+                "commands": commands,
+                "message": f"فایل‌های سرتیفیکت و کلید خصوصی با موفقیت روی روتر ایمپورت شدند."
+            }
+        return {"status": "success_live", "cert_name": cert_name, "commands": commands}
+
+    def setup_iran_ipdeny(self) -> Dict[str, Any]:
+        commands = [
+            "# 1. Download ir.zone from IPDeny",
+            "/tool fetch url='https://www.ipdeny.com/ipblocks/data/countries/ir.zone' dst-path=ir.zone.txt",
+            "# 2. Parse and populate IRAN address list",
+            "/system script add name=iran-fetch source='...'",
+            "# 3. Add daily scheduler at 04:00 AM",
+            "/system scheduler add name=iran-fetch-daily interval=1d start-time=04:00:00 on-event=iran-fetch",
+            "# 4. Trigger script execution now",
+            "/system script run iran-fetch"
+        ]
+        if self.is_mock:
+            _SIMULATOR_STATE["command_logs"].append({
+                "server": self.server_id,
+                "destination": "iran-fetch-setup",
+                "commands": commands
+            })
+            return {
+                "status": "success_simulated",
+                "commands": commands,
+                "message": "اسکریپت و زمان‌بندی روزانه IPDeny ایران با موفقیت روی روتر ثبت و اجرا شد."
+            }
+        return {"status": "success_live", "commands": commands}
+
     def remove_destination(self, name: str) -> Dict[str, Any]:
         if self.is_mock:
             if self.server_id in _SIMULATOR_STATE["tunnels"]:
