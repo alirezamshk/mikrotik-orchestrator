@@ -24,14 +24,17 @@ async def dashboard_view(request: Request):
     statuses = fleet_service.get_all_statuses()
     total_users = sum(s.ppp_active_users + s.ipsec_active_peers for s in statuses if s.online)
     online_count = sum(1 for s in statuses if s.online)
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "servers": statuses,
-        "total_users": total_users,
-        "online_count": online_count,
-        "total_count": len(statuses),
-        "app_version": settings.app_version
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context={
+            "servers": statuses,
+            "total_users": total_users,
+            "online_count": online_count,
+            "total_count": len(statuses),
+            "app_version": settings.app_version
+        }
+    )
 
 # --- Server Management APIs ---
 @app.get("/api/servers")
