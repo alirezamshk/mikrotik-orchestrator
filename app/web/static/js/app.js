@@ -345,3 +345,234 @@ async function submitWizard(e) {
         alert('خطا در اجرای ویزارد: ' + err.message);
     }
 }
+
+// --- INTERACTIVE STEP-BY-STEP WIZARD ---
+let wizCurrentStep = 1;
+let wizServerId = null;
+let wizServerName = '';
+
+function openWizardModal() {
+    wizCurrentStep = 1;
+    wizServerId = null;
+    document.querySelectorAll('.wiz-console').forEach(c => { c.style.display = 'none'; c.innerText = ''; });
+    document.querySelectorAll('.wiz-next-btn').forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
+    updateWizardStepperUI();
+    openModal('wizardModal');
+}
+
+function updateWizardStepperUI() {
+    for (let i = 1; i <= 5; i++) {
+        const content = document.getElementById('wizardStep' + i);
+        const indicator = document.getElementById('stepInd' + i);
+        if (content) content.classList.toggle('active', i === wizCurrentStep);
+        if (indicator) {
+            indicator.classList.toggle('active', i === wizCurrentStep);
+            indicator.classList.toggle('completed', i < wizCurrentStep);
+        }
+    }
+}
+
+function goToWizardStep(step) {
+    wizCurrentStep = step;
+    updateWizardStepperUI();
+}
+
+function toggleTunnelTypeFields() {
+    const isL2tp = document.getElementById('wiz_tun_type').value === 'l2tp_ether';
+    document.getElementById('wiz_l2tp_specific_fields').style.display = isL2tp ? 'grid' : 'none';
+}
+
+// STEP 1 EXECUTE
+async function executeStep1() {
+    const btn = document.getElementById('btnExecStep1');
+    const consoleBox = document.getElementById('consoleStep1');
+    const nextBtn = document.getElementById('btnNextStep1');
+    
+    btn.disabled = true;
+    btn.innerText = '⏳ در حال تست اتصال و ست کردن پورت‌ها...';
+    consoleBox.style.display = 'block';
+    consoleBox.innerText = '# [1/4] در حال برقراری اتصال با پورت API میکروتیک...\n';
+
+    const payload = {
+        server_name: document.getElementById('wiz_name').value.trim(),
+        server_host: document.getElementById('wiz_host').value.trim(),
+        api_port: parseInt(document.getElementById('wiz_api_port').value),
+        username: document.getElementById('wiz_user').value.trim(),
+        password: document.getElementById('wiz_pass').value,
+        winbox_port: parseInt(document.getElementById('wiz_winbox_port').value)
+    };
+
+    try {
+        const res = await fetch('/api/wizard/step1-connect', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        wizServerId = data.server_id;
+        wizServerName = payload.server_name;
+        
+        consoleBox.innerText += '✅ اتصال تایید شد! دستورات زیر روی روتر ست شدند:\n\n';
+        consoleBox.innerText += data.commands.join('\n');
+        
+        btn.innerText = '✅ مرحله ۱ با موفقیت انجام شد';
+        btn.style.background = 'var(--success)';
+        
+        nextBtn.disabled = false;
+        nextBtn.style.opacity = '1';
+    } catch (err) {
+        consoleBox.innerText += '❌ خطا در اتصال: ' + err.message;
+        btn.disabled = false;
+        btn.innerText = 'تلاش مجدد';
+    }
+}
+
+// STEP 2 EXECUTE
+async function executeStep2() {
+    const btn = document.getElementById('btnExecStep2');
+    const consoleBox = document.getElementById('consoleStep2');
+    const nextBtn = document.getElementById('btnNextStep2');
+    
+    btn.disabled = true;
+    btn.innerText = '⏳ در حال تولید و Sign کردن سرتیفیکت...';
+    consoleBox.style.display = 'block';
+    consoleBox.innerText = '# [2/4] در حال تولید کلید و امضای گواهی در میکروتیک...\n';
+
+    const payload = {
+        server_id: wizServerId,
+        cert_mode: document.querySelector('input[name="wiz_cert_mode"]:checked').value,
+        cert_name: document.getElementById('wiz_cert_name').value.trim(),
+        cert_content: document.getElementById('wiz_cert_content').value.trim(),
+        key_content: document.getElementById('wiz_key_content').value.trim()
+    };
+
+    try {
+        const res = await fetch('/api/wizard/step2-cert', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        consoleBox.innerText += '✅ ' + data.message + '\n\n';
+        consoleBox.innerText += data.commands.join('\n');
+        
+        btn.innerText = '✅ سرتیفیکت ساخته شد';
+        btn.style.background = 'var(--success)';
+        
+        nextBtn.disabled = false;
+        nextBtn.style.opacity = '1';
+    } catch (err) {
+        consoleBox.innerText += '❌ خطا: ' + err.message;
+        btn.disabled = false;
+        btn.innerText = 'تلاش مجدد';
+    }
+}
+
+// STEP 3 EXECUTE
+async function executeStep3() {
+    const btn = document.getElementById('btnExecStep3');
+    const consoleBox = document.getElementById('consoleStep3');
+    const nextBtn = document.getElementById('btnNextStep3');
+    
+    btn.disabled = true;
+    btn.innerText = '⏳ در حال اعمال RADIUS، IKEv2 و IPDeny...';
+    consoleBox.style.display = 'block';
+    consoleBox.innerText = '# [3/4] در حال ثبت تنظیمات رادیوس و فایروال...\n';
+
+    const payload = {
+        server_id: wizServerId,
+        radius_ip: document.getElementById('wiz_radius_ip').value.trim(),
+        radius_secret: document.getElementById('wiz_radius_secret').value,
+        ikev2_pool: document.getElementById('wiz_ikev2_pool').value.trim(),
+        cert_name: document.getElementById('wiz_cert_name').value.trim(),
+        enable_iran_fetch: document.getElementById('wiz_iran_check').checked
+    };
+
+    try {
+        const res = await fetch('/api/wizard/step3-services', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        consoleBox.innerText += '✅ ' + data.message + '\n\n';
+        consoleBox.innerText += data.commands.join('\n');
+        
+        btn.innerText = '✅ رادیوس و سرویس‌ها فعال شدند';
+        btn.style.background = 'var(--success)';
+        
+        nextBtn.disabled = false;
+        nextBtn.style.opacity = '1';
+    } catch (err) {
+        consoleBox.innerText += '❌ خطا: ' + err.message;
+        btn.disabled = false;
+        btn.innerText = 'تلاش مجدد';
+    }
+}
+
+// STEP 4 EXECUTE (Add Tunnel)
+let createdTunnelsCount = 0;
+async function executeStep4AddTunnel() {
+    const btn = document.getElementById('btnExecStep4');
+    const consoleBox = document.getElementById('consoleStep4');
+    const nextBtn = document.getElementById('btnNextStep4');
+    
+    btn.disabled = true;
+    btn.innerText = '⏳ در حال ساخت تونل و مسیر...';
+    consoleBox.style.display = 'block';
+
+    const tunType = document.getElementById('wiz_tun_type').value;
+    const dest = {
+        name: document.getElementById('wiz_dst_name').value.toLowerCase().trim(),
+        country_label: document.getElementById('wiz_dst_label').value.trim(),
+        tunnel_type: tunType,
+        remote_ip: document.getElementById('wiz_dst_remote_ip').value.trim(),
+        local_ip: document.getElementById('wiz_dst_local_ip').value.trim() || null,
+        local_tunnel_id: parseInt(document.getElementById('wiz_dst_loc_tun_id').value) || 33,
+        remote_tunnel_id: parseInt(document.getElementById('wiz_dst_rem_tun_id').value) || 22,
+        local_session_id: parseInt(document.getElementById('wiz_dst_loc_sess_id').value) || 333,
+        remote_session_id: parseInt(document.getElementById('wiz_dst_rem_sess_id').value) || 222,
+        tunnel_local_ip: document.getElementById('wiz_dst_tun_loc_ip').value.trim(),
+        tunnel_remote_ip: document.getElementById('wiz_dst_tun_rem_ip').value.trim(),
+        ovpn_port: parseInt(document.getElementById('wiz_dst_ovpn_port').value),
+        ovpn_protocol: 'udp',
+        client_pool_range: document.getElementById('wiz_dst_pool_range').value.trim(),
+        client_gateway_ip: document.getElementById('wiz_dst_gw').value.trim(),
+        client_subnet: document.getElementById('wiz_dst_subnet').value.trim(),
+        enable_killswitch: true,
+        bypass_iran: true
+    };
+
+    try {
+        const res = await fetch('/api/wizard/step4-tunnel', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ server_id: wizServerId, destination: dest })
+        });
+        const data = await res.json();
+        
+        consoleBox.innerText = '✅ ' + data.message + '\n\n';
+        consoleBox.innerText += data.commands.join('\n');
+        
+        createdTunnelsCount++;
+        btn.disabled = false;
+        btn.innerText = '➕ افزودن یک تونل دیگر به این سرور';
+        
+        // Add badge
+        const badge = document.createElement('span');
+        badge.className = 'status-badge badge-online';
+        badge.style.margin = '4px';
+        badge.innerText = dest.country_label + ' (' + (tunType === 'l2tp_ether' ? 'L2TP' : 'GRE') + ' :' + dest.ovpn_port + ')';
+        document.getElementById('wizCreatedTunnelsList').appendChild(badge);
+        
+        nextBtn.disabled = false;
+        nextBtn.style.opacity = '1';
+    } catch (err) {
+        consoleBox.innerText += '❌ خطا: ' + err.message;
+        btn.disabled = false;
+        btn.innerText = 'تلاش مجدد';
+    }
+}

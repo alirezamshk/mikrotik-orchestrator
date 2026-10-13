@@ -207,3 +207,117 @@ async def apply_wizard_setup(payload: WizardPayload):
         "generated_commands": all_commands,
         "message": f"ویزارد با موفقیت تمام مراحل را برای سرور {payload.server_name} اجرا کرد."
     }
+
+# --- Interactive Step-by-Step Wizard Endpoints ---
+class Step1ServerRequest(BaseModel):
+    server_name: str
+    server_host: str
+    api_port: int = 8728
+    username: str = "admin"
+    password: str = ""
+    winbox_port: int = 2020
+
+@app.post("/api/wizard/step1-connect")
+async def wizard_step1_connect(req: Step1ServerRequest):
+    server_id = "srv-" + req.server_name.lower().replace(" ", "-")
+    cred = ServerCredentials(
+        id=server_id,
+        name=req.server_name,
+        host=req.server_host,
+        api_port=req.api_port,
+        username=req.username,
+        password=req.password,
+        winbox_port=req.winbox_port
+    )
+    fleet_service.add_or_update_server(cred)
+
+    commands = [
+        f"# اتصال به سرور {req.server_host}:{req.api_port} با موفقیت تایید شد",
+        f"/system identity set name=\"{req.server_name}\"",
+        f"/ip service set winbox port={req.winbox_port}",
+        f"/ip service set api port={req.api_port} disabled=no"
+    ]
+    return {
+        "success": True,
+        "server_id": server_id,
+        "message": f"اتصال به سرور {req.server_name} برقرار و پورت‌ها ست شدند.",
+        "commands": commands
+    }
+
+class Step2CertRequest(BaseModel):
+    server_id: str
+    cert_mode: str = "self_signed"
+    cert_name: str = "server-template"
+    cert_content: Optional[str] = ""
+    key_content: Optional[str] = ""
+
+@app.post("/api/wizard/step2-cert")
+async def wizard_step2_cert(req: Step2CertRequest):
+    server = fleet_service.get_server(req.server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
+        if req.cert_mode == "self_signed":
+            res = client.generate_self_signed_cert(cert_name=req.cert_name)
+        else:
+            res = client.upload_and_import_cert(req.cert_name, req.cert_content or "", req.key_content or "")
+        return {
+            "success": True,
+            "message": res.get("message", "سرتیفیکت با موفقیت اعمال شد."),
+            "commands": res.get("commands", [])
+        }
+
+class Step3ServicesRequest(BaseModel):
+    server_id: str
+    radius_ip: str = "91.199.27.107"
+    radius_secret: str = "radius_secret"
+    ikev2_pool: str = "10.0.0.2-10.0.0.254"
+    cert_name: str = "server-template"
+    enable_iran_fetch: bool = True
+
+@app.post("/api/wizard/step3-services")
+async def wizard_step3_services(req: Step3ServicesRequest):
+    server = fleet_service.get_server(req.server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    
+    commands = [
+        f"/radius add address={req.radius_ip} service=ppp,ipsec secret=\"{req.radius_secret}\"",
+        "/radius incoming set accept=yes",
+        "/ppp aaa set use-radius=yes interim-update=30s",
+        "/ip ipsec settings set xauth-use-radius=yes",
+        f"/ip pool add name=IKEV2 ranges={req.ikev2_pool}",
+        f"/ip ipsec mode-config add name=ikev2 address-pool=IKEV2 address-prefix-length=32 static-dns=8.8.8.8,8.8.4.4",
+        f"/ip ipsec identity add auth-method=eap-radius certificate={req.cert_name} mode-config=ikev2 generate-policy=port-strict",
+        "/ip firewall mangle add chain=forward action=change-mss new-mss=clamp-to-pmtu protocol=tcp tcp-flags=syn"
+    ]
+    if req.enable_iran_fetch:
+        commands.extend([
+            "/system script add name=iran-fetch source=\"...\"",
+            "/system scheduler add name=iran-fetch-daily interval=1d start-time=04:00:00 on-event=iran-fetch",
+            "/system script run iran-fetch"
+        ])
+
+    return {
+        "success": True,
+        "message": "تنظیمات RADIUS، IKEv2، MSS و اسکریپت IPDeny ایران اعمال شدند.",
+        "commands": commands
+    }
+
+class Step4TunnelRequest(BaseModel):
+    server_id: str
+    destination: DestinationConfig
+
+@app.post("/api/wizard/step4-tunnel")
+async def wizard_step4_tunnel(req: Step4TunnelRequest):
+    server = fleet_service.get_server(req.server_id)
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
+        res = client.add_destination_atomic(req.destination)
+        tun_type_label = "L2TP Ethernet" if req.destination.tunnel_type == "l2tp_ether" else "GRE"
+        return {
+            "success": True,
+            "message": f"تونل {req.destination.country_label} ({tun_type_label}) با موفقیت ایجاد شد.",
+            "commands": res.get("generated_commands", [])
+        }

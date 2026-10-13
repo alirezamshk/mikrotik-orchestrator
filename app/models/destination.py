@@ -21,6 +21,13 @@ class DestinationConfig(BaseModel):
     ovpn_protocol: str = Field(default="udp", description="Protocol: udp or tcp")
     ovpn_certificate: str = Field(default="server-template", description="Certificate name in router")
     
+    # L2TP Ethernet (L2TPv3) specific fields
+    local_ip: Optional[str] = Field(default=None, description="Local Iran Server IP for L2TPv3")
+    local_tunnel_id: Optional[int] = Field(default=33, description="Local Tunnel ID for L2TPv3")
+    remote_tunnel_id: Optional[int] = Field(default=22, description="Remote Tunnel ID for L2TPv3")
+    local_session_id: Optional[int] = Field(default=333, description="Local Session ID for L2TPv3")
+    remote_session_id: Optional[int] = Field(default=222, description="Remote Session ID for L2TPv3")
+
     # Routing & Killswitch
     routing_table: Optional[str] = None
     enable_killswitch: bool = True

@@ -137,9 +137,17 @@ class RouterOSClient:
         profile_name = dest.get_profile_name()
         ovpn_server_name = dest.get_ovpn_server_name()
 
+        if dest.tunnel_type == "l2tp_ether":
+            tun_iface = f"l2tp-{dest.name}"
+            loc_clause = f" local-address={dest.local_ip}" if dest.local_ip else ""
+            tunnel_cmd = f"/interface l2tp-ether add name={tun_iface} connect-to={dest.remote_ip}{loc_clause} l2tp-proto-version=l2tpv3-udp unmanaged-mode=yes local-tunnel-id={dest.local_tunnel_id or 33} remote-tunnel-id={dest.remote_tunnel_id or 22} local-session-id={dest.local_session_id or 333} remote-session-id={dest.remote_session_id or 222} use-ipsec=no"
+        else:
+            tun_iface = f"gre-{dest.name}"
+            tunnel_cmd = f"/interface gre add name={tun_iface} remote-address={dest.remote_ip}"
+
         generated_commands = [
-            f"/interface gre add name={gre_name} remote-address={dest.remote_ip}",
-            f"/ip address add address={dest.tunnel_local_ip} interface={gre_name} comment='auto:{dest.name}-gre'",
+            tunnel_cmd,
+            f"/ip address add address={dest.tunnel_local_ip} interface={tun_iface} comment='auto:{dest.name}-gre'",
             f"/routing table add name={table_name} fib=yes",
             f"/ip route add dst-address=0.0.0.0/0 gateway={dest.tunnel_remote_ip} routing-table={table_name} distance=1 comment='auto:{dest.name.upper()}'",
             f"/ip route add dst-address=0.0.0.0/0 blackhole=yes distance=10 routing-table={table_name} comment='auto:killswitch-{dest.name}'",
