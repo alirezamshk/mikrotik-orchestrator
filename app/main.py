@@ -341,18 +341,22 @@ async def wizard_step3_services(req: Step3ServicesRequest):
         raise HTTPException(status_code=404, detail="Server not found")
     
     commands = [
-        f"# --- تنظیمات RADIUS مرکزی و اکانتینگ ---",
-        f"/radius add address={req.radius_ip} service=ppp,ipsec secret=\"{req.radius_secret}\" comment=\"auto:central-radius\"",
+        f"# --- تنظیمات RADIUS مرکزی و اکانتینگ (ویرایش در صورت وجود بدون ساخت ردیف تکراری) ---",
+        f":local radId [/radius find where comment=\"auto:central-radius\"];",
+        f":if ([:len $radId] = 0) do={{ :set radId [/radius find where address=\"{req.radius_ip}\"]; }}",
+        f":if ([:len $radId] = 0) do={{ :set radId [/radius find where service~\"ppp\"]; }}",
+        f":if ([:len $radId] > 0) do={{ /radius set [:pick $radId 0] address=\"{req.radius_ip}\" service=ppp,ipsec secret=\"{req.radius_secret}\" comment=\"auto:central-radius\" }} else={{ /radius add address=\"{req.radius_ip}\" service=ppp,ipsec secret=\"{req.radius_secret}\" comment=\"auto:central-radius\" }}",
         "/radius incoming set accept=yes",
         "/ppp aaa set use-radius=yes interim-update=30s",
         "/ip ipsec settings set xauth-use-radius=yes",
-        f"# --- تنظیمات IKEv2 EAP ---",
-        f"/ip pool add name=IKEV2 ranges={req.ikev2_pool}",
-        f"/ip ipsec mode-config add name=ikev2 address-pool=IKEV2 address-prefix-length=32 static-dns=8.8.8.8,8.8.4.4",
-        f"/ip ipsec identity add auth-method=eap-radius certificate={req.cert_name} mode-config=ikev2 generate-policy=port-strict",
-        "/ip firewall mangle add chain=forward action=change-mss new-mss=clamp-to-pmtu protocol=tcp tcp-flags=syn comment=\"auto:clamp-mss\"",
+        f"# --- تنظیمات IKEv2 EAP (بررسی و به‌روزرسانی در صورت وجود) ---",
+        f":if ([:len [/ip pool find where name=\"IKEV2\"]] > 0) do={{ /ip pool set [find where name=\"IKEV2\"] ranges=\"{req.ikev2_pool}\" }} else={{ /ip pool add name=\"IKEV2\" ranges=\"{req.ikev2_pool}\" }}",
+        f":if ([:len [/ip ipsec mode-config find where name=\"ikev2\"]] > 0) do={{ /ip ipsec mode-config set [find where name=\"ikev2\"] address-pool=IKEV2 address-prefix-length=32 static-dns=8.8.8.8,8.8.4.4 }} else={{ /ip ipsec mode-config add name=\"ikev2\" address-pool=IKEV2 address-prefix-length=32 static-dns=8.8.8.8,8.8.4.4 }}",
+        f":if ([:len [/ip ipsec peer find where name=\"ikev2\"]] = 0) do={{ /ip ipsec peer add name=\"ikev2\" exchange-mode=ike2 passive=yes send-initial-contact=no profile=default }}",
+        f":if ([:len [/ip ipsec identity find where auth-method=\"eap-radius\"]] > 0) do={{ /ip ipsec identity set [find where auth-method=\"eap-radius\"] peer=ikev2 certificate=\"{req.cert_name}\" mode-config=ikev2 generate-policy=port-strict }} else={{ /ip ipsec identity add peer=ikev2 auth-method=eap-radius certificate=\"{req.cert_name}\" mode-config=ikev2 generate-policy=port-strict }}",
+        ":if ([:len [/ip firewall mangle find where comment=\"auto:clamp-mss\"]] = 0) do={ /ip firewall mangle add chain=forward action=change-mss new-mss=clamp-to-pmtu protocol=tcp tcp-flags=syn comment=\"auto:clamp-mss\" }",
         "# --- تنظیمات Source NAT استاندارد (WAN ایران + اینترفیس لیست TUNNELS) ---",
-        ":if ([:len [/interface list find where name=TUNNELS]] = 0) do={ /interface list add name=TUNNELS comment=\"auto:exit-tunnels\" }",
+        ":if ([:len [/interface list find where name=\"TUNNELS\"]] = 0) do={ /interface list add name=\"TUNNELS\" comment=\"auto:exit-tunnels\" }",
         ":if ([:len [/ip firewall nat find where action=masquerade out-interface=ether1]] = 0) do={ /ip firewall nat add chain=srcnat action=masquerade out-interface=ether1 comment=\"auto:masq-wan-iran\" place-before=0 }",
         ":if ([:len [/ip firewall nat find where action=masquerade out-interface-list=TUNNELS]] = 0) do={ /ip firewall nat add chain=srcnat action=masquerade out-interface-list=TUNNELS comment=\"auto:masq-tunnels\" place-before=0 }"
     ]

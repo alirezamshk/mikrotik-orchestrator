@@ -431,10 +431,14 @@ class RouterOSClient:
 
     def generate_self_signed_cert(self, cert_name: str = "server-template", common_name: str = "server-template", days: int = 3650) -> Dict[str, Any]:
         commands = [
+            f"# 1. ساخت مرجع صدور گواهی CA داخلی با فلگ‌های کامل KAT",
             f"/certificate add name=ca-authority common-name=\"CA-Authority\" days-valid={days} key-size=2048 key-usage=crl-sign,key-cert-sign",
             f"/certificate sign ca-authority name=ca-authority",
+            f"/certificate set [find where name=ca-authority] trusted=yes",
+            f"# 2. ساخت سرتیفیکت سرور {cert_name} با فلگ‌های KT (امضا شده توسط CA)",
             f"/certificate add name={cert_name} common-name=\"{common_name}\" days-valid={days} key-size=2048 key-usage=digital-signature,key-encipherment,tls-server",
-            f"/certificate sign {cert_name} ca=ca-authority name={cert_name}"
+            f"/certificate sign {cert_name} ca=ca-authority name={cert_name}",
+            f"/certificate set [find where name={cert_name}] trusted=yes"
         ]
         if self.is_mock:
             _SIMULATOR_STATE["command_logs"].append({
@@ -448,9 +452,79 @@ class RouterOSClient:
                 "commands": commands,
                 "message": f"سرتیفیکت {cert_name} با موفقیت روی میکروتیک تولید و Sign شد."
             }
-        
-        self.execute_routeros_commands(commands)
-        return {"status": "success_live", "cert_name": cert_name, "commands": commands, "message": f"سرتیفیکت {cert_name} روی میکروتیک واقعی با موفقیت ایجاد و امضا شد."}
+
+        if not self._api:
+            self.connect()
+
+        cert_res = self._api.get_resource("/certificate")
+
+        # 1. Handle CA (ca-authority) with full KAT flags
+        ca_items = cert_res.get(name="ca-authority")
+        if not ca_items:
+            cert_res.add(
+                name="ca-authority",
+                common_name="CA-Authority",
+                days_valid=str(days),
+                key_size="2048",
+                key_usage="crl-sign,key-cert-sign"
+            )
+            cert_res.call("sign", {"number": "ca-authority"})
+            for _ in range(20):
+                time.sleep(1.0)
+                items = cert_res.get(name="ca-authority")
+                if items and items[0].get("private-key") == "true":
+                    break
+            items = cert_res.get(name="ca-authority")
+            if items:
+                cert_res.set(id=items[0]["id"], trusted="yes")
+        else:
+            ca_id = ca_items[0]["id"]
+            if ca_items[0].get("private-key") != "true":
+                cert_res.call("sign", {"number": "ca-authority"})
+                for _ in range(20):
+                    time.sleep(1.0)
+                    items = cert_res.get(name="ca-authority")
+                    if items and items[0].get("private-key") == "true":
+                        break
+            items = cert_res.get(name="ca-authority")
+            if items:
+                cert_res.set(id=items[0]["id"], trusted="yes")
+
+        # 2. Handle Server Certificate with KT + Signed/Issued by CA
+        srv_items = cert_res.get(name=cert_name)
+        if srv_items and (srv_items[0].get("private-key") != "true" or srv_items[0].get("issued") != "true"):
+            try:
+                cert_res.remove(id=srv_items[0]["id"])
+            except Exception:
+                pass
+            srv_items = []
+
+        if not srv_items:
+            cert_res.add(
+                name=cert_name,
+                common_name=common_name,
+                days_valid=str(days),
+                key_size="2048",
+                key_usage="digital-signature,key-encipherment,tls-server"
+            )
+            cert_res.call("sign", {"number": cert_name, "ca": "ca-authority"})
+            for _ in range(20):
+                time.sleep(1.0)
+                items = cert_res.get(name=cert_name)
+                if items and items[0].get("private-key") == "true" and items[0].get("issued") == "true":
+                    break
+            items = cert_res.get(name=cert_name)
+            if items:
+                cert_res.set(id=items[0]["id"], trusted="yes")
+        else:
+            cert_res.set(id=srv_items[0]["id"], trusted="yes")
+
+        return {
+            "status": "success_live",
+            "cert_name": cert_name,
+            "commands": commands,
+            "message": f"سرتیفیکت CA با پرچم‌های کامل KAT و سرتیفیکت {cert_name} با پرچم KT (امضا شده و معتبر) با موفقیت روی میکروتیک ایجاد و فعال شدند."
+        }
 
     def upload_and_import_cert(self, cert_name: str, cert_content: str, key_content: str) -> Dict[str, Any]:
         cert_file = f"{cert_name}.crt"
