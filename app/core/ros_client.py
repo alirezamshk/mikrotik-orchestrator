@@ -1,5 +1,8 @@
 import logging
+import uuid
+import time
 from typing import Dict, Any, List, Optional
+from fastapi import HTTPException
 from app.config import settings
 from app.models.destination import DestinationConfig
 
@@ -51,12 +54,20 @@ class RouterOSClient:
                 use_ssl=self.use_ssl,
                 plaintext_login=True
             )
+            self._connection.set_timeout(8)
             self._api = self._connection.get_api()
+            # Verify credentials and API response
+            self._api.get_resource("/system/identity").get()
             return True
         except Exception as e:
-            logger.warning(f"Cannot connect to real router {self.host}:{self.port} ({e}). Falling back to Mock Simulator.")
-            self.is_mock = True
-            return True
+            logger.error(f"Cannot connect to real router {self.host}:{self.port} ({e})")
+            if settings.mock_mode:
+                self.is_mock = True
+                return True
+            raise HTTPException(
+                status_code=400,
+                detail=f"ارتباط با میکروتیک واقعی در آدرس {self.host}:{self.port} برقرار نشد. لطفاً از باز بودن پورت API ({self.port}) و صحت نام‌کاربری/رمز عبور اطمینان حاصل فرمایید. (علت خطا: {str(e)})"
+            )
 
     def disconnect(self):
         if self._connection:
@@ -73,6 +84,63 @@ class RouterOSClient:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.disconnect()
+
+    def execute_routeros_commands(self, commands: List[str]) -> Dict[str, Any]:
+        """
+        Executes a sequence of RouterOS commands on the live router via API /system/script.
+        If in mock mode, logs commands to simulator state.
+        """
+        if self.is_mock:
+            _SIMULATOR_STATE["command_logs"].append({
+                "server": self.server_id,
+                "commands": commands
+            })
+            return {"status": "success_simulated", "commands": commands}
+
+        clean_lines = []
+        for c in commands:
+            line = c.strip()
+            if line and not line.startswith("#"):
+                clean_lines.append(line)
+
+        if not clean_lines:
+            return {"status": "success_live", "commands": []}
+
+        script_content = "\r\n".join(clean_lines)
+        script_name = f"orch-{uuid.uuid4().hex[:6]}"
+
+        if not self._api:
+            self.connect()
+
+        try:
+            script_res = self._api.get_resource("/system/script")
+            script_res.add(
+                name=script_name,
+                source=script_content,
+                policy="ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon"
+            )
+            try:
+                script_res.call("run", {"number": script_name})
+            except Exception as run_err:
+                logger.warning(f"Script run call notice: {run_err}")
+
+            time.sleep(1.0)
+
+            # Cleanup temporary script
+            try:
+                items = script_res.get(name=script_name)
+                if items:
+                    script_res.remove(id=items[0]["id"])
+            except Exception:
+                pass
+
+            return {"status": "success_live", "commands": clean_lines}
+        except Exception as e:
+            logger.error(f"Error executing script on RouterOS {self.host}: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"خطا در اعمال مستقیم دستورات روی میکروتیک ({self.host}): {str(e)}"
+            )
 
     def get_system_summary(self) -> Dict[str, Any]:
         if self.is_mock:
@@ -186,8 +254,15 @@ class RouterOSClient:
                 "message": "تمام دستورات کانفیگ میکروتیک با موفقیت در شبیه‌ساز تست و اعمال شدند."
             }
 
-        return {"status": "success_live", "destination": dest.name}
-
+        # LIVE EXECUTION ON ROUTER
+        self.execute_routeros_commands(generated_commands)
+        return {
+            "status": "success_live",
+            "destination": dest.name,
+            "ovpn_port": dest.ovpn_port,
+            "generated_commands": generated_commands,
+            "message": f"کانفیگ لوکیشن {dest.country_label} با موفقیت روی میکروتیک واقعی اعمال شد."
+        }
 
     def list_certificates(self) -> List[Dict[str, Any]]:
         """Scans and lists existing certificates on the router"""
@@ -224,7 +299,6 @@ class RouterOSClient:
             for g in self._api.get_resource("/interface/gre").get():
                 name = g.get("name")
                 remote = g.get("remote-address")
-                # find ip
                 ips = self._api.get_resource("/ip/address").get(interface=name)
                 ip_addr = ips[0].get("address") if ips else ""
                 detected.append({
@@ -270,7 +344,9 @@ class RouterOSClient:
                 "commands": commands,
                 "message": f"سرتیفیکت {cert_name} با موفقیت روی میکروتیک تولید و Sign شد."
             }
-        return {"status": "success_live", "cert_name": cert_name, "commands": commands}
+        
+        self.execute_routeros_commands(commands)
+        return {"status": "success_live", "cert_name": cert_name, "commands": commands, "message": f"سرتیفیکت {cert_name} روی میکروتیک واقعی با موفقیت ایجاد و امضا شد."}
 
     def upload_and_import_cert(self, cert_name: str, cert_content: str, key_content: str) -> Dict[str, Any]:
         cert_file = f"{cert_name}.crt"
@@ -293,7 +369,9 @@ class RouterOSClient:
                 "commands": commands,
                 "message": f"فایل‌های سرتیفیکت و کلید خصوصی با موفقیت روی روتر ایمپورت شدند."
             }
-        return {"status": "success_live", "cert_name": cert_name, "commands": commands}
+        
+        self.execute_routeros_commands(commands)
+        return {"status": "success_live", "cert_name": cert_name, "commands": commands, "message": f"سرتیفیکت {cert_name} روی میکروتیک واقعی با موفقیت ایمپورت شد."}
 
     def setup_iran_ipdeny(self) -> Dict[str, Any]:
         commands = [
@@ -317,7 +395,9 @@ class RouterOSClient:
                 "commands": commands,
                 "message": "اسکریپت و زمان‌بندی روزانه IPDeny ایران با موفقیت روی روتر ثبت و اجرا شد."
             }
-        return {"status": "success_live", "commands": commands}
+        
+        self.execute_routeros_commands(commands)
+        return {"status": "success_live", "commands": commands, "message": "اسکریپت و زمان‌بندی روزانه IPDeny ایران روی میکروتیک واقعی با موفقیت ثبت و اجرا شد."}
 
     def remove_destination(self, name: str) -> Dict[str, Any]:
         if self.is_mock:
@@ -326,6 +406,18 @@ class RouterOSClient:
                     t for t in _SIMULATOR_STATE["tunnels"][self.server_id] if t["name"] != f"gre-{name}"
                 ]
             return {"status": "removed_simulated", "destination": name}
+        
+        cmds = [
+            f"/interface gre remove [find where name=gre-{name}]",
+            f"/interface l2tp-ether remove [find where name=l2tp-{name}]",
+            f"/routing table remove [find where name=to-{name}]",
+            f"/ip route remove [find where routing-table=to-{name}]",
+            f"/ip pool remove [find where name=ovpn-{name}]",
+            f"/ppp profile remove [find where name=ovpn-{name}]",
+            f"/interface ovpn-server server remove [find where name=ovpn-{name}]",
+            f"/ip firewall mangle remove [find where comment='auto:route-{name}']"
+        ]
+        self.execute_routeros_commands(cmds)
         return {"status": "removed_live", "destination": name}
 
     @staticmethod

@@ -11,7 +11,30 @@ from app.models.bootstrap import BootstrapRequest
 from app.services.fleet_service import fleet_service
 from app.core.ros_client import RouterOSClient
 
+
+from pydantic import BaseModel
+from typing import List, Optional
+
 app = FastAPI(title=settings.app_name, version=settings.app_version)
+
+class ModeToggleRequest(BaseModel):
+    mock_mode: bool
+
+@app.get("/api/system/mode")
+async def get_system_mode():
+    return {
+        "mock_mode": settings.mock_mode,
+        "mode_label": "شبیه‌ساز (Simulator)" if settings.mock_mode else "میکروتیک واقعی (Live ROS)"
+    }
+
+@app.post("/api/system/mode")
+async def set_system_mode(req: ModeToggleRequest):
+    settings.mock_mode = req.mock_mode
+    return {
+        "success": True,
+        "mock_mode": settings.mock_mode,
+        "mode_label": "شبیه‌ساز (Simulator)" if settings.mock_mode else "میکروتیک واقعی (Live ROS)"
+    }
 
 static_dir = os.path.join(os.path.dirname(__file__), "web", "static")
 templates_dir = os.path.join(os.path.dirname(__file__), "web", "templates")
@@ -257,11 +280,14 @@ async def wizard_step1_connect(req: Step1ServerRequest):
         f"/ip service set winbox port={winbox_port}",
         f"/ip service set api port={api_port} disabled=no"
     ]
+    with RouterOSClient(server_host, req.username, req.password, api_port, False, server_id=server_id) as client:
+        client.execute_routeros_commands(commands)
+
     return {
         "success": True,
         "server_id": server_id,
         "server_name": server_name,
-        "message": f"اتصال به سرور {server_name} برقرار و پورت‌ها ست شدند.",
+        "message": f"اتصال به میکروتیک {server_name} برقرار و تنظیمات اولیه با موفقیت ست شدند.",
         "commands": commands
     }
 
@@ -341,9 +367,12 @@ async def wizard_step3_services(req: Step3ServicesRequest):
             "/system script run iran-fetch"
         ])
 
+    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
+        client.execute_routeros_commands(commands)
+
     return {
         "success": True,
-        "message": "تنظیمات RADIUS، IKEv2، MSS Clamp و اسکریپت خودکار IPDeny ایران اعمال شدند.",
+        "message": "تنظیمات RADIUS، IKEv2، MSS Clamp و اسکریپت خودکار IPDeny ایران با موفقیت اعمال شدند.",
         "commands": commands
     }
 
@@ -439,9 +468,12 @@ async def wizard_adopt_existing_tunnel(req: AdoptTunnelRequest):
         f"/ip firewall mangle add chain=prerouting action=mark-routing new-routing-mark={table_name} src-address={req.client_subnet} dst-address-list=!IRAN comment='auto:route-{req.country_code}'"
     ]
 
+    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
+        client.execute_routeros_commands(commands)
+
     return {
         "success": True,
-        "message": f"مسیر کامل روتینگ، OpenVPN (پورت {req.ovpn_port}) و Killswitch برای تونل {req.tunnel_name} با موفقیت ساخته شد.",
+        "message": f"مسیر کامل روتینگ، OpenVPN (پورت {req.ovpn_port}) و Killswitch برای تونل {req.tunnel_name} با موفقیت ساخته و اعمال شد.",
         "commands": commands
     }
 
@@ -474,9 +506,12 @@ async def wizard_adopt_all_tunnels(req: AdoptAllTunnelsRequest):
             f"/ip firewall mangle add chain=prerouting action=mark-routing new-routing-mark={table_name} src-address={t.client_subnet} dst-address-list=!IRAN comment='auto:route-{t.country_code}'"
         ])
 
+    with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
+        client.execute_routeros_commands(all_cmds)
+
     return {
         "success": True,
         "count": len(req.tunnels),
-        "message": f"تعداد {len(req.tunnels)} تونل با موفقیت روتینگ، OpenVPN و Killswitch دریافت کردند.",
+        "message": f"تعداد {len(req.tunnels)} تونل با موفقیت روتینگ، OpenVPN و Killswitch دریافت کردند و اعمال شدند.",
         "commands": all_cmds
     }

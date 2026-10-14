@@ -962,3 +962,65 @@ function finishWizardAndReload() {
     closeModal('wizardModal');
     window.location.reload();
 }
+
+
+// ==========================================
+// System Mode Management (Live vs Simulator)
+// ==========================================
+let currentMockMode = false;
+
+async function checkSystemMode() {
+    try {
+        const res = await fetch('/api/system/mode');
+        const data = await res.json();
+        currentMockMode = data.mock_mode;
+        updateModeUI();
+    } catch (e) {
+        console.error('Error fetching system mode:', e);
+    }
+}
+
+function updateModeUI() {
+    const banner = document.getElementById('modeBanner');
+    const dot = document.getElementById('modeDot');
+    const text = document.getElementById('modeStatusText');
+    const btn = document.getElementById('toggleModeBtn');
+    if (!banner || !dot || !text || !btn) return;
+
+    if (currentMockMode) {
+        banner.style.background = 'rgba(245, 158, 11, 0.08)';
+        banner.style.borderBottom = '1px solid rgba(245, 158, 11, 0.2)';
+        dot.style.background = '#f59e0b';
+        text.innerHTML = '<strong>حالت شبیه‌ساز (Simulator Mode) فعال است:</strong> تمام عملیات کانفیگ و روتینگ به صورت ایمن و آزمایشی تست می‌شوند.';
+        btn.innerHTML = '🟢 سوئیچ به میکروتیک واقعی (Live)';
+        btn.className = 'btn btn-primary';
+    } else {
+        banner.style.background = 'rgba(16, 185, 129, 0.08)';
+        banner.style.borderBottom = '1px solid rgba(16, 185, 129, 0.2)';
+        dot.style.background = '#10b981';
+        text.innerHTML = '<strong>حالت تست زنده میکروتیک (Live RouterOS) فعال است:</strong> دستورات مستقیماً از طریق API پورت ۸۷۲۸ روی روتر فیزیکی/ابری اعمال می‌شوند.';
+        btn.innerHTML = '🟠 سوئیچ به شبیه‌ساز (Simulator)';
+        btn.className = 'btn btn-secondary';
+    }
+}
+
+async function toggleSystemMode() {
+    const nextMode = !currentMockMode;
+    const msg = nextMode ? 'آیا می‌خواهید به حالت شبیه‌ساز (آزمایشی و بدون دستکاری روتر واقعی) سوئیچ کنید؟' : 'آیا می‌خواهید به حالت تست واقعی (اجرای مستقیم فرامین روی میکروتیک) سوئیچ کنید؟';
+    if (!confirm(msg)) return;
+    try {
+        const res = await fetch('/api/system/mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mock_mode: nextMode })
+        });
+        const data = await res.json();
+        currentMockMode = data.mock_mode;
+        updateModeUI();
+        alert(nextMode ? 'سیستم به حالت شبیه‌ساز امن تغییر یافت.' : 'سیستم به حالت تست زنده و مستقیم روی میکروتیک تغییر یافت.');
+    } catch (e) {
+        alert('خطا در تغییر حالت سیستم: ' + e);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', checkSystemMode);

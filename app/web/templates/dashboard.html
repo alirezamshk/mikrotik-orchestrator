@@ -11,14 +11,15 @@
 </head>
 <body>
 
-<!-- Top Simulator Notification Bar -->
-<div class="mock-banner">
-    <div style="display: flex; align-items: center; gap: 8px;">
-        <span class="live-dot" style="background: var(--primary);"></span>
-        <span><strong>حالت شبیه‌ساز (Simulator Mode) فعال است:</strong> تمام عملیات کانفیگ و روتینگ به صورت ایمن و آزمایشی تست می‌شوند.</span>
+<!-- Top Status & Mode Bar -->
+<div id="modeBanner" class="mock-banner" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; transition: all 0.3s; background: rgba(16, 185, 129, 0.08); border-bottom: 1px solid rgba(16, 185, 129, 0.2);">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span id="modeDot" class="live-dot" style="background: #10b981; width: 9px; height: 9px; border-radius: 50%; display: inline-block;"></span>
+        <span id="modeStatusText"><strong>حالت تست زنده میکروتیک (Live RouterOS) فعال است:</strong> دستورات مستقیماً از طریق API پورت ۸۷۲۸ روی روتر فیزیکی/ابری اعمال می‌شوند.</span>
     </div>
-    <div>
-        <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="showLogsModal()">📜 مشاهده لاگ دستورات روتر</button>
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <button id="toggleModeBtn" class="btn btn-secondary" style="padding: 5px 14px; font-size: 0.8rem;" onclick="toggleSystemMode()">🟠 سوئیچ به شبیه‌ساز</button>
+        <button class="btn btn-secondary" style="padding: 5px 14px; font-size: 0.8rem;" onclick="showLogsModal()">📜 مشاهده لاگ دستورات روتر</button>
     </div>
 </div>
 

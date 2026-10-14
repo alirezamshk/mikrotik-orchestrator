@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     app_name: str = "MikroTik Fleet Orchestrator"
     app_version: str = "1.0.0"
     debug: bool = True
-    mock_mode: bool = True  # Run with simulated RouterOS if real router is not reachable
+    mock_mode: bool = False  # Run with simulated RouterOS if real router is not reachable
     host: str = "0.0.0.0"
     port: int = 8080
     data_dir: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
