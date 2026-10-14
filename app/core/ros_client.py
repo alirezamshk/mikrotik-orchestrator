@@ -286,12 +286,12 @@ class RouterOSClient:
             return []
 
     def detect_existing_tunnels(self) -> List[Dict[str, Any]]:
-        """Scans existing GRE and L2TP-ether interfaces with their assigned IP addresses"""
+        """Scans existing GRE and L2TP-ether interfaces with their assigned IP addresses and link state"""
         if self.is_mock:
             return [
-                {"name": "gre-ca", "type": "gre", "remote_ip": "67.55.2.40", "local_ip_30": "20.20.3.2/30", "gw_ip": "20.20.3.1", "configured": False},
-                {"name": "gre-to-germany", "type": "gre", "remote_ip": "91.99.129.82", "local_ip_30": "40.40.40.2/30", "gw_ip": "40.40.40.1", "configured": False},
-                {"name": "l2tp-milad", "type": "l2tp_ether", "remote_ip": "65.108.18.128", "local_ip_30": "10.10.2.2/30", "gw_ip": "10.10.2.1", "configured": False}
+                {"name": "gre-ca", "type": "gre", "remote_ip": "67.55.2.40", "local_ip_30": "20.20.3.2/30", "gw_ip": "20.20.3.1", "running": True, "disabled": False, "configured": False},
+                {"name": "gre-to-germany", "type": "gre", "remote_ip": "91.99.129.82", "local_ip_30": "40.40.40.2/30", "gw_ip": "40.40.40.1", "running": False, "disabled": False, "configured": False},
+                {"name": "l2tp-milad", "type": "l2tp_ether", "remote_ip": "65.108.18.128", "local_ip_30": "10.10.2.2/30", "gw_ip": "10.10.2.1", "running": True, "disabled": False, "configured": False}
             ]
         detected = []
         try:
@@ -299,30 +299,67 @@ class RouterOSClient:
             for g in self._api.get_resource("/interface/gre").get():
                 name = g.get("name")
                 remote = g.get("remote-address")
+                is_running = g.get("running") == "true"
+                is_disabled = g.get("disabled") == "true"
                 ips = self._api.get_resource("/ip/address").get(interface=name)
                 ip_addr = ips[0].get("address") if ips else ""
+                
+                gw_ip = ""
+                if ip_addr and "/" in ip_addr:
+                    clean_ip = ip_addr.split("/")[0]
+                    parts = clean_ip.split(".")
+                    if len(parts) == 4:
+                        last = int(parts[3])
+                        if last % 4 == 1:
+                            gw_ip = f"{parts[0]}.{parts[1]}.{parts[2]}.{last + 1}"
+                        elif last % 4 == 2:
+                            gw_ip = f"{parts[0]}.{parts[1]}.{parts[2]}.{last - 1}"
+
                 detected.append({
                     "name": name,
                     "type": "gre",
-                    "remote_ip": remote,
+                    "remote_ip": remote or "",
                     "local_ip_30": ip_addr,
+                    "gw_ip": gw_ip,
+                    "running": is_running,
+                    "disabled": is_disabled,
                     "configured": False
                 })
             # 2. L2TP Ethernet
             for l in self._api.get_resource("/interface/l2tp-ether").get():
                 name = l.get("name")
                 remote = l.get("connect-to")
+                is_running = l.get("running") == "true"
+                is_disabled = l.get("disabled") == "true"
                 ips = self._api.get_resource("/ip/address").get(interface=name)
                 ip_addr = ips[0].get("address") if ips else ""
+                
+                gw_ip = ""
+                if ip_addr and "/" in ip_addr:
+                    clean_ip = ip_addr.split("/")[0]
+                    parts = clean_ip.split(".")
+                    if len(parts) == 4:
+                        last = int(parts[3])
+                        if last % 4 == 1:
+                            gw_ip = f"{parts[0]}.{parts[1]}.{parts[2]}.{last + 1}"
+                        elif last % 4 == 2:
+                            gw_ip = f"{parts[0]}.{parts[1]}.{parts[2]}.{last - 1}"
+
                 detected.append({
                     "name": name,
                     "type": "l2tp_ether",
-                    "remote_ip": remote,
+                    "remote_ip": remote or "",
                     "local_ip_30": ip_addr,
+                    "gw_ip": gw_ip,
+                    "running": is_running,
+                    "disabled": is_disabled,
                     "configured": False
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error scanning tunnels: {e}")
+
+        # Sort: running tunnels first, then by name
+        detected.sort(key=lambda x: (not x.get("running", False), x.get("name", "")))
         return detected
 
     def generate_self_signed_cert(self, cert_name: str = "server-template", common_name: str = "server-template", days: int = 3650) -> Dict[str, Any]:

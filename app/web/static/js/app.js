@@ -229,14 +229,14 @@ let cachedFleetServers = [];
 
 // Beautiful Curated Country Cards with Smart Defaults
 let customizableCountriesList = [
-    { checked: true, code: 'de', flag: '🇩🇪', label: 'آلمان', port: 6066, proto: 'udp', type: 'gre', remote_ip: '91.99.129.82', local_30: '40.40.40.2/30', gw_30: '40.40.40.1', pool: '10.18.1.2-10.18.1.200', subnet: '10.18.1.0/24' },
-    { checked: true, code: 'usa', flag: '🇺🇸', label: 'آمریکا', port: 6065, proto: 'udp', type: 'gre', remote_ip: '69.197.190.75', local_30: '10.10.11.2/30', gw_30: '10.10.11.1', pool: '10.17.1.2-10.17.1.200', subnet: '10.17.1.0/24' },
-    { checked: true, code: 'eng', flag: '🇬🇧', label: 'انگلیس', port: 6060, proto: 'tcp', type: 'gre', remote_ip: '51.38.66.183', local_30: '10.10.3.2/30', gw_30: '10.10.3.1', pool: '10.16.1.2-10.16.1.200', subnet: '10.16.1.0/24' },
-    { checked: true, code: 'nl', flag: '🇳🇱', label: 'هلند', port: 6064, proto: 'udp', type: 'gre', remote_ip: '94.102.57.228', local_30: '10.10.7.2/30', gw_30: '10.10.7.1', pool: '10.15.1.2-10.15.1.200', subnet: '10.15.1.0/24' },
-    { checked: false, code: 'fin', flag: '🇫🇮', label: 'فنلاند', port: 6059, proto: 'udp', type: 'gre', remote_ip: '65.108.18.128', local_30: '10.10.2.2/30', gw_30: '10.10.2.1', pool: '10.12.1.2-10.12.1.200', subnet: '10.12.1.0/24' },
-    { checked: false, code: 'pol', flag: '🇵🇱', label: 'لهستان', port: 6063, proto: 'udp', type: 'gre', remote_ip: '51.77.38.238', local_30: '10.10.4.2/30', gw_30: '10.10.4.1', pool: '10.13.1.2-10.13.1.200', subnet: '10.13.1.0/24' },
-    { checked: false, code: 'ca', flag: '🇨🇦', label: 'کانادا', port: 6067, proto: 'udp', type: 'gre', remote_ip: '67.55.2.40', local_30: '20.20.3.2/30', gw_30: '20.20.3.1', pool: '10.19.1.2-10.19.1.200', subnet: '10.19.1.0/24' },
-    { checked: false, code: 'trk', flag: '🇹🇷', label: 'ترکیه', port: 6058, proto: 'udp', type: 'gre', remote_ip: '188.132.174.132', local_30: '10.10.12.2/30', gw_30: '10.10.12.1', pool: '10.11.1.2-10.11.1.200', subnet: '10.11.1.0/24' }
+    { checked: false, code: 'de', flag: '🇩🇪', label: 'آلمان', port: 6066, proto: 'udp', type: 'gre', remote_ip: '', local_30: '40.10.1.2/30', gw_30: '40.10.1.1', pool: '10.18.1.2-10.18.1.200', subnet: '10.18.1.0/24' },
+    { checked: false, code: 'usa', flag: '🇺🇸', label: 'آمریکا', port: 6065, proto: 'udp', type: 'gre', remote_ip: '', local_30: '40.11.1.2/30', gw_30: '40.11.1.1', pool: '10.17.1.2-10.17.1.200', subnet: '10.17.1.0/24' },
+    { checked: false, code: 'eng', flag: '🇬🇧', label: 'انگلیس', port: 6060, proto: 'tcp', type: 'gre', remote_ip: '', local_30: '40.12.1.2/30', gw_30: '40.12.1.1', pool: '10.16.1.2-10.16.1.200', subnet: '10.16.1.0/24' },
+    { checked: false, code: 'nl', flag: '🇳🇱', label: 'هلند', port: 6064, proto: 'udp', type: 'gre', remote_ip: '', local_30: '40.13.1.2/30', gw_30: '40.13.1.1', pool: '10.15.1.2-10.15.1.200', subnet: '10.15.1.0/24' },
+    { checked: false, code: 'fin', flag: '🇫🇮', label: 'فنلاند', port: 6059, proto: 'udp', type: 'gre', remote_ip: '', local_30: '40.14.1.2/30', gw_30: '40.14.1.1', pool: '10.12.1.2-10.12.1.200', subnet: '10.12.1.0/24' },
+    { checked: false, code: 'pol', flag: '🇵🇱', label: 'لهستان', port: 6063, proto: 'udp', type: 'gre', remote_ip: '', local_30: '40.15.1.2/30', gw_30: '40.15.1.1', pool: '10.13.1.2-10.13.1.200', subnet: '10.13.1.0/24' },
+    { checked: false, code: 'ca', flag: '🇨🇦', label: 'کانادا', port: 6067, proto: 'udp', type: 'gre', remote_ip: '', local_30: '40.16.1.2/30', gw_30: '40.16.1.1', pool: '10.19.1.2-10.19.1.200', subnet: '10.19.1.0/24' },
+    { checked: false, code: 'trk', flag: '🇹🇷', label: 'ترکیه', port: 6058, proto: 'udp', type: 'gre', remote_ip: '', local_30: '40.17.1.2/30', gw_30: '40.17.1.1', pool: '10.11.1.2-10.11.1.200', subnet: '10.11.1.0/24' }
 ];
 
 // Open Wizard Modal
@@ -441,9 +441,14 @@ function renderCustomizableCountryRows() {
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+            <div style="margin-top: 6px;">
+                <label style="font-size: 0.74rem; color: var(--text-muted); display: block; margin-bottom: 2px;">آی‌پی سرور خارج (مقصد تونل)</label>
+                <input type="text" id="c_remote_${idx}" placeholder="آی‌پی سرور خارج شما (مثال: 185.x.x.x)" value="${item.remote_ip || ''}" style="font-family: var(--font-mono); font-size: 0.82rem; width: 100%; padding: 5px 8px;" onchange="customizableCountriesList[${idx}].remote_ip = this.value.trim()">
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
                 <span class="tag-pill" style="font-size: 0.72rem;">تونل ${item.type.toUpperCase()}</span>
-                <span style="font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-mono);">${item.remote_ip}</span>
+                <span style="font-size: 0.72rem; color: var(--text-dim);">ساب‌نت کلاینت: <code>10.${idx+20}.1.0/24</code></span>
             </div>
         `;
         container.appendChild(card);
@@ -517,12 +522,18 @@ async function executeBatchCustomCountries() {
         if (isChecked) {
             const portInput = document.getElementById(`c_port_${idx}`);
             const port = portInput ? (parseInt(portInput.value) || item.port) : item.port;
+            const remoteInput = document.getElementById(`c_remote_${idx}`);
+            const remoteIp = (remoteInput && remoteInput.value.trim()) ? remoteInput.value.trim() : item.remote_ip;
+            if (!remoteIp) {
+                alert(`لطفاً آی‌پی سرور خارج را برای کشور ${item.label} وارد نمایید.`);
+                return;
+            }
 
             selectedDests.push({
                 name: item.code.toLowerCase(),
                 country_label: item.label,
                 tunnel_type: item.type,
-                remote_ip: item.remote_ip,
+                remote_ip: remoteIp,
                 tunnel_local_ip: item.local_30 || `40.${idx+10}.1.2/30`,
                 tunnel_remote_ip: item.gw_30 || `40.${idx+10}.1.1`,
                 ovpn_port: port,
@@ -786,6 +797,13 @@ function onFinishStep3() {
 }
 
 // Scenario 2: Adopt Tunnels
+let adoptFilterActiveOnly = true;
+
+function toggleAdoptFilter() {
+    adoptFilterActiveOnly = !adoptFilterActiveOnly;
+    renderAdoptTunnels();
+}
+
 function renderAdoptTunnels() {
     const container = document.getElementById('wizAdoptTunnelsContainer');
     container.innerHTML = '';
@@ -795,28 +813,77 @@ function renderAdoptTunnels() {
         return;
     }
 
-    detectedTunnelsList.forEach((tun, idx) => {
+    const runningCount = detectedTunnelsList.filter(t => t.running).length;
+    const downCount = detectedTunnelsList.length - runningCount;
+
+    // Filter toolbar
+    const toolbar = document.createElement('div');
+    toolbar.style.display = 'flex';
+    toolbar.style.justifyContent = 'space-between';
+    toolbar.style.alignItems = 'center';
+    toolbar.style.marginBottom = '14px';
+    toolbar.style.padding = '10px 16px';
+    toolbar.style.background = 'rgba(15, 23, 42, 0.6)';
+    toolbar.style.borderRadius = 'var(--radius-md)';
+    toolbar.style.border = '1px solid var(--border-color)';
+    toolbar.innerHTML = `
+        <div style="font-size: 0.85rem; display: flex; gap: 12px; align-items: center;">
+            <span>مجموع تونل‌های روتر: <strong>${detectedTunnelsList.length}</strong></span>
+            <span style="color: #10b981;">🟢 فعال (Running): <strong>${runningCount}</strong></span>
+            <span style="color: #ef4444;">🔴 غیرفعال/قطع (Down): <strong>${downCount}</strong></span>
+        </div>
+        <div>
+            <label style="cursor: pointer; font-size: 0.85rem; color: #fff; display: inline-flex; align-items: center; gap: 6px;">
+                <input type="checkbox" ${adoptFilterActiveOnly ? 'checked' : ''} onchange="toggleAdoptFilter()">
+                فقط نمایش تونل‌های فعال و متصل (Running)
+            </label>
+        </div>
+    `;
+    container.appendChild(toolbar);
+
+    const filteredList = adoptFilterActiveOnly ? detectedTunnelsList.filter(t => t.running) : detectedTunnelsList;
+
+    if (filteredList.length === 0) {
+        const emptyNotice = document.createElement('div');
+        emptyNotice.style.padding = '1.5rem';
+        emptyNotice.style.textAlign = 'center';
+        emptyNotice.style.color = 'var(--text-muted)';
+        emptyNotice.innerHTML = 'هیچ تونل فعالی (Running) یافت نشد. تیک گزینه بالا را بردارید تا تونل‌های قطع نیز نمایش داده شوند.';
+        container.appendChild(emptyNotice);
+        return;
+    }
+
+    filteredList.forEach((tun, idx) => {
         const card = document.createElement('div');
         card.className = 'country-item-card';
         card.style.marginBottom = '12px';
+        if (!tun.running) {
+            card.style.opacity = '0.65';
+        }
         
         const cleanName = tun.name.replace(/^gre-/, '').replace(/^l2tp-/, '').replace(/^to-/, '');
         const defaultPort = 6050 + idx;
         const defaultPool = `10.${20 + idx}.1.2-10.${20 + idx}.1.200`;
-        const defaultGw = tun.gw_ip || `10.${20 + idx}.1.1`;
+        const defaultGw = tun.gw_ip || `10.${20 + idx}.1.2`;
         const defaultSubnet = `10.${20 + idx}.1.0/24`;
+
+        const statusBadge = tun.running 
+            ? '<span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 8px; border-radius: 6px; font-weight: 600; font-size: 0.75rem;">🟢 متصل و فعال (Running)</span>'
+            : '<span style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 2px 8px; border-radius: 6px; font-weight: 600; font-size: 0.75rem;">🔴 قطع یا غیرفعال (Down)</span>';
 
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
                     <strong style="font-size: 1.05rem; color: #fff;">اینترفیس: <code>${tun.name}</code></strong>
-                    <span class="tag-pill" style="margin-right: 8px; color: var(--primary);">${tun.type.toUpperCase()}</span>
-                    <span style="font-size: 0.8rem; color: var(--text-muted); margin-right: 8px;">IP ریموت: ${tun.remote_ip || 'نامشخص'}</span>
+                    <span class="tag-pill" style="color: var(--primary);">${tun.type.toUpperCase()}</span>
+                    ${statusBadge}
+                    <span style="font-size: 0.8rem; color: var(--text-muted); margin-right: 8px;">IP ریموت: <strong>${tun.remote_ip || 'نامشخص'}</strong></span>
+                    ${tun.local_ip_30 ? '<span style="font-size: 0.8rem; color: var(--text-dim);">لوکال: ' + tun.local_ip_30 + '</span>' : ''}
                 </div>
                 <button type="button" class="btn btn-primary" id="btnAdopt_${idx}" onclick="adoptSingleTunnel(${idx}, '${tun.name}', '${tun.type}', '${defaultGw}')">⚡ ساخت روتینگ و OpenVPN</button>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px; font-size: 0.85rem; margin-top: 8px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px; font-size: 0.85rem; margin-top: 10px;">
                 <div><label>کد مقصد:</label><input type="text" id="ad_code_${idx}" value="${cleanName}"></div>
                 <div><label>پورت OpenVPN:</label><input type="number" id="ad_port_${idx}" value="${defaultPort}"></div>
                 <div>
