@@ -402,6 +402,24 @@ function toggleCertModeFields() {
 // ==============================================
 // MODERN COUNTRY CARDS (CUSTOM PORTS & PROTOCOLS)
 // ==============================================
+function onCountryTunnelSelect(idx, tunnelName) {
+    if (!tunnelName) {
+        customizableCountriesList[idx].assigned_tunnel = null;
+        renderCustomizableCountryRows();
+        return;
+    }
+    const t = detectedTunnelsList.find(x => x.name === tunnelName);
+    if (t) {
+        customizableCountriesList[idx].assigned_tunnel = t.name;
+        customizableCountriesList[idx].type = t.type;
+        customizableCountriesList[idx].remote_ip = t.remote_ip || '';
+        customizableCountriesList[idx].local_30 = t.local_ip_30 || `40.${idx+10}.1.2/30`;
+        customizableCountriesList[idx].gw_30 = t.gw_ip || `40.${idx+10}.1.1`;
+        customizableCountriesList[idx].checked = true;
+        renderCustomizableCountryRows();
+    }
+}
+
 function renderCustomizableCountryRows() {
     const container = document.getElementById('countryCustomList');
     if (!container) return;
@@ -411,6 +429,20 @@ function renderCustomizableCountryRows() {
         const card = document.createElement('div');
         card.className = `country-item-card ${item.checked ? 'selected' : ''}`;
         card.id = `c_card_${idx}`;
+
+        // Options for tunnel selector dropdown
+        let tunnelOptions = '<option value="">➕ ساخت تونل جدید (ورود دستی IP)</option>';
+        if (detectedTunnelsList && detectedTunnelsList.length > 0) {
+            detectedTunnelsList.forEach(t => {
+                const isRun = t.running ? '🟢 فعال' : '🔴 قطع';
+                const isSel = (item.assigned_tunnel === t.name) ? 'selected' : '';
+                tunnelOptions += `<option value="${t.name}" ${isSel}>${t.name} (${t.type.toUpperCase()}) | ${isRun} | ریموت: ${t.remote_ip || '---'}</option>`;
+            });
+        }
+
+        const assignedBadge = item.assigned_tunnel 
+            ? `<span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 8px; border-radius: 6px; font-weight: 600; font-size: 0.72rem;">متصل به تونل: <code>${item.assigned_tunnel}</code></span>`
+            : `<span class="tag-pill" style="font-size: 0.72rem;">تونل جدید (${item.type.toUpperCase()})</span>`;
 
         card.innerHTML = `
             <div class="country-card-header">
@@ -427,7 +459,15 @@ function renderCustomizableCountryRows() {
                 </label>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
+            <!-- Existing Tunnel Selector Dropdown -->
+            <div style="margin-top: 6px;">
+                <label style="font-size: 0.74rem; color: var(--accent-cyan, #38bdf8); display: block; margin-bottom: 2px; font-weight: 600;">🔗 انتخاب از لیست تونل‌های موجود روتر:</label>
+                <select id="c_tun_select_${idx}" style="font-size: 0.8rem; width: 100%; padding: 5px 8px; font-family: var(--font-mono); border-radius: 6px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color);" onchange="onCountryTunnelSelect(${idx}, this.value)">
+                    ${tunnelOptions}
+                </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
                 <div>
                     <label style="font-size: 0.74rem; color: var(--text-muted); display: block; margin-bottom: 2px;">پورت OpenVPN</label>
                     <input type="number" id="c_port_${idx}" value="${item.port}" style="font-family: var(--font-mono); font-weight: 600;" onchange="customizableCountriesList[${idx}].port = parseInt(this.value)">
@@ -447,8 +487,8 @@ function renderCustomizableCountryRows() {
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
-                <span class="tag-pill" style="font-size: 0.72rem;">تونل ${item.type.toUpperCase()}</span>
-                <span style="font-size: 0.72rem; color: var(--text-dim);">ساب‌نت کلاینت: <code>10.${idx+20}.1.0/24</code></span>
+                ${assignedBadge}
+                <span style="font-size: 0.72rem; color: var(--text-dim);">ساب‌نت: <code>10.${idx+20}.1.0/24</code></span>
             </div>
         `;
         container.appendChild(card);
@@ -533,6 +573,7 @@ async function executeBatchCustomCountries() {
                 name: item.code.toLowerCase(),
                 country_label: item.label,
                 tunnel_type: item.type,
+                existing_tunnel_name: item.assigned_tunnel || null,
                 remote_ip: remoteIp,
                 tunnel_local_ip: item.local_30 || `40.${idx+10}.1.2/30`,
                 tunnel_remote_ip: item.gw_30 || `40.${idx+10}.1.1`,
@@ -677,6 +718,9 @@ async function executeStep1WithScan() {
             console.error('Tunnel scan err', e);
         }
 
+        // Re-render country rows with detected tunnels populated in dropdowns
+        renderCustomizableCountryRows();
+
         btn.innerText = '✅ اتصال و اسکن روتر تایید شد';
         btn.style.background = 'var(--success)';
         btn.style.color = '#000';
@@ -804,6 +848,24 @@ function toggleAdoptFilter() {
     renderAdoptTunnels();
 }
 
+function onAdoptPresetSelect(idx, code) {
+    if (!code) return;
+    const presets = {
+        'de': { name: 'de', label: 'آلمان', port: 6066 },
+        'nl': { name: 'nl', label: 'هلند', port: 6064 },
+        'eng': { name: 'eng', label: 'انگلیس', port: 6060 },
+        'fin': { name: 'fin', label: 'فنلاند', port: 6059 },
+        'usa': { name: 'usa', label: 'آمریکا', port: 6065 },
+        'trk': { name: 'trk', label: 'ترکیه', port: 6058 },
+        'ca': { name: 'ca', label: 'کانادا', port: 6067 },
+        'pol': { name: 'pol', label: 'لهستان', port: 6063 }
+    };
+    if (presets[code]) {
+        document.getElementById(`ad_code_${idx}`).value = presets[code].name;
+        document.getElementById(`ad_port_${idx}`).value = presets[code].port;
+    }
+}
+
 function renderAdoptTunnels() {
     const container = document.getElementById('wizAdoptTunnelsContainer');
     container.innerHTML = '';
@@ -883,7 +945,21 @@ function renderAdoptTunnels() {
                 <button type="button" class="btn btn-primary" id="btnAdopt_${idx}" onclick="adoptSingleTunnel(${idx}, '${tun.name}', '${tun.type}', '${defaultGw}')">⚡ ساخت روتینگ و OpenVPN</button>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px; font-size: 0.85rem; margin-top: 10px;">
+            <div style="display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr 1fr; gap: 8px; font-size: 0.85rem; margin-top: 10px;">
+                <div>
+                    <label>تخصیص کشور:</label>
+                    <select id="ad_preset_${idx}" onchange="onAdoptPresetSelect(${idx}, this.value)" style="font-size: 0.8rem; padding: 4px;">
+                        <option value="">-- انتخاب کشور --</option>
+                        <option value="de">🇩🇪 آلمان (۶۰۶۶)</option>
+                        <option value="nl">🇳🇱 هلند (۶۰۶۴)</option>
+                        <option value="eng">🇬🇧 انگلیس (۶۰۶۰)</option>
+                        <option value="fin">🇫🇮 فنلاند (۶۰۵۹)</option>
+                        <option value="usa">🇺🇸 آمریکا (۶۰۶۵)</option>
+                        <option value="trk">🇹🇷 ترکیه (۶۰۵۸)</option>
+                        <option value="ca">🇨🇦 کانادا (۶۰۶۷)</option>
+                        <option value="pol">🇵🇱 لهستان (۶۰۶۳)</option>
+                    </select>
+                </div>
                 <div><label>کد مقصد:</label><input type="text" id="ad_code_${idx}" value="${cleanName}"></div>
                 <div><label>پورت OpenVPN:</label><input type="number" id="ad_port_${idx}" value="${defaultPort}"></div>
                 <div>

@@ -205,17 +205,28 @@ class RouterOSClient:
         profile_name = dest.get_profile_name()
         ovpn_server_name = dest.get_ovpn_server_name()
 
-        if dest.tunnel_type == "l2tp_ether":
+        if dest.existing_tunnel_name:
+            tun_iface = dest.existing_tunnel_name
+            generated_commands = [
+                f"# --- اتصال و مسیریابی روی تونل موجود {tun_iface} ({dest.country_label}) ---"
+            ]
+        elif dest.tunnel_type == "l2tp_ether":
             tun_iface = f"l2tp-{dest.name}"
             loc_clause = f" local-address={dest.local_ip}" if dest.local_ip else ""
             tunnel_cmd = f"/interface l2tp-ether add name={tun_iface} connect-to={dest.remote_ip}{loc_clause} l2tp-proto-version=l2tpv3-udp unmanaged-mode=yes local-tunnel-id={dest.local_tunnel_id or 33} remote-tunnel-id={dest.remote_tunnel_id or 22} local-session-id={dest.local_session_id or 333} remote-session-id={dest.remote_session_id or 222} use-ipsec=no"
+            generated_commands = [
+                tunnel_cmd,
+                f"/ip address add address={dest.tunnel_local_ip} interface={tun_iface} comment='auto:{dest.name}-gre'"
+            ]
         else:
             tun_iface = f"gre-{dest.name}"
             tunnel_cmd = f"/interface gre add name={tun_iface} remote-address={dest.remote_ip}"
+            generated_commands = [
+                tunnel_cmd,
+                f"/ip address add address={dest.tunnel_local_ip} interface={tun_iface} comment='auto:{dest.name}-gre'"
+            ]
 
-        generated_commands = [
-            tunnel_cmd,
-            f"/ip address add address={dest.tunnel_local_ip} interface={tun_iface} comment='auto:{dest.name}-gre'",
+        generated_commands.extend([
             f"/interface list member add list=TUNNELS interface={tun_iface} comment='auto:tun-{dest.name}'",
             f"/routing table add name={table_name} fib=yes",
             f"/ip route add dst-address=0.0.0.0/0 gateway={dest.tunnel_remote_ip} routing-table={table_name} distance=1 comment='auto:{dest.name.upper()}'",
@@ -224,7 +235,7 @@ class RouterOSClient:
             f"/ppp profile add name={profile_name} local-address={dest.client_gateway_ip} remote-address={pool_name} dns-server=8.8.8.8,8.8.4.4 change-tcp-mss=yes use-encryption=required",
             f"/interface ovpn-server server add name={ovpn_server_name} port={dest.ovpn_port} protocol={dest.ovpn_protocol} default-profile={profile_name} certificate={dest.ovpn_certificate} cipher=aes128-gcm,aes256-gcm redirect-gateway=def1 disabled=no",
             f"/ip firewall mangle add chain=prerouting action=mark-routing new-routing-mark={table_name} src-address={dest.client_subnet} dst-address-list=!IRAN comment='auto:route-{dest.name}'"
-        ]
+        ])
 
         if self.is_mock:
             if self.server_id not in _SIMULATOR_STATE["tunnels"]:

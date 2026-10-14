@@ -5,6 +5,7 @@ class DestinationConfig(BaseModel):
     name: str = Field(..., description="Short name code, e.g. 'de', 'usa', 'pln', 'eng'")
     country_label: str = Field(..., description="Display name, e.g. 'Germany', 'USA'")
     tunnel_type: str = Field(default="gre", description="Tunnel type: gre, l2tp, wireguard")
+    existing_tunnel_name: Optional[str] = Field(default=None, description="Attach to an existing tunnel interface on the router")
     remote_ip: str = Field(..., description="Public IP of the foreign tunnel endpoint")
     
     # Internal point-to-point /30 subnet
