@@ -21,10 +21,11 @@ async function submitServer(e) {
     e.preventDefault();
     const data = {
         id: 'srv-' + Math.random().toString(36).substring(2, 7),
-        name: document.getElementById('srv_name').value,
-        host: document.getElementById('srv_host').value,
+        name: document.getElementById('srv_name').value.trim(),
+        host: document.getElementById('srv_host').value.trim(),
         api_port: parseInt(document.getElementById('srv_api_port').value),
-        username: document.getElementById('srv_user').value,
+        winbox_port: parseInt(document.getElementById('srv_winbox_port').value) || 2020,
+        username: document.getElementById('srv_user').value.trim(),
         password: document.getElementById('srv_pass').value
     };
     try {
@@ -34,11 +35,11 @@ async function submitServer(e) {
             body: JSON.stringify(data)
         });
         if (res.ok) { window.location.reload(); }
-        else { alert('خطا در ثبت سرور'); }
+        else { alert('خطا در ثبت روتر'); }
     } catch (err) { alert('خطا: ' + err.message); }
 }
 
-// Add country destination (to all or specific server)
+// Add country destination
 async function submitDestination(e) {
     e.preventDefault();
     const targetServer = document.getElementById('dst_target_server').value;
@@ -52,8 +53,8 @@ async function submitDestination(e) {
         ovpn_port: parseInt(document.getElementById('dst_ovpn_port').value),
         ovpn_protocol: document.getElementById('dst_ovpn_protocol') ? document.getElementById('dst_ovpn_protocol').value : 'udp',
         client_pool_range: document.getElementById('dst_pool_range').value.trim(),
-        client_gateway_ip: document.getElementById('dst_gw').value.trim(),
-        client_subnet: document.getElementById('dst_subnet').value.trim(),
+        client_gateway_ip: '10.20.1.1',
+        client_subnet: '10.20.1.0/24',
         enable_killswitch: true,
         bypass_iran: true
     };
@@ -81,10 +82,10 @@ async function submitDestination(e) {
                     break;
                 }
             }
-            document.getElementById('resultTitle').innerText = '✅ کشور ' + data.country_label + ' به تمام سرورها اضافه شد!';
+            document.getElementById('resultTitle').innerText = '✅ کشور ' + data.country_label + ' به تمام روترها اضافه شد!';
         } else {
             allCmds = result.generated_commands || [];
-            document.getElementById('resultTitle').innerText = '✅ کشور ' + data.country_label + ' به سرور انتخاب‌شده اضافه شد!';
+            document.getElementById('resultTitle').innerText = '✅ کشور ' + data.country_label + ' به روتر انتخاب‌شده اضافه شد!';
         }
         
         document.getElementById('resultCode').innerText = allCmds.join('\n');
@@ -95,7 +96,7 @@ async function submitDestination(e) {
 // Certificate Manager Modal & Tabs
 function openCertModal(serverId, serverName) {
     currentServerIdForCert = serverId;
-    document.getElementById('certServerTitle').innerText = 'مدیریت سرتیفیکت: ' + serverName;
+    document.getElementById('certServerTitle').innerText = '🔐 مدیریت سرتیفیکت: ' + serverName;
     switchCertTab('selfSigned');
     openModal('certModal');
 }
@@ -103,8 +104,8 @@ function openCertModal(serverId, serverName) {
 function switchCertTab(tabName) {
     document.getElementById('tabSelfSigned').style.display = tabName === 'selfSigned' ? 'block' : 'none';
     document.getElementById('tabUpload').style.display = tabName === 'upload' ? 'block' : 'none';
-    document.getElementById('btnTabSelfSigned').classList.toggle('active', tabName === 'selfSigned');
-    document.getElementById('btnTabUpload').classList.toggle('active', tabName === 'upload');
+    document.getElementById('btnTabSelfSigned').style.borderBottom = tabName === 'selfSigned' ? '2px solid var(--primary)' : 'none';
+    document.getElementById('btnTabUpload').style.borderBottom = tabName === 'upload' ? '2px solid var(--primary)' : 'none';
 }
 
 // Generate Self-Signed on router
@@ -156,7 +157,7 @@ async function submitUploadCert(e) {
 
 // Trigger Iran IPDeny Sync
 async function syncIranList(serverId, serverName) {
-    if (!confirm('آیا مایلید اسکریپت دریافت رنج‌های آی‌پی ایران از IPDeny روی سرور ' + serverName + ' اجرا شود؟')) return;
+    if (!confirm('آیا مایلید اسکریپت دریافت رنج‌های آی‌پی ایران از IPDeny روی روتر ' + serverName + ' اجرا شود؟')) return;
     try {
         const res = await fetch('/api/servers/' + serverId + '/sync-iran-ips', { method: 'POST' });
         const result = await res.json();
@@ -166,19 +167,24 @@ async function syncIranList(serverId, serverName) {
 
 // View tunnels
 async function viewServerTunnels(id, name) {
-    document.getElementById('tunServerTitle').innerText = 'تونل‌های سرور ' + name;
+    document.getElementById('tunServerTitle').innerText = '🌐 تونل‌های فعال روتر: ' + name;
     try {
         const res = await fetch('/api/servers/' + id + '/destinations');
         const tunnels = await res.json();
         let html = '<table style="width: 100%; border-collapse: collapse; text-align: right;">';
-        html += '<tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted);"><th style="padding: 8px 0;">نام تونل</th><th>IP ریموت</th><th>وضعیت</th></tr>';
-        tunnels.forEach(t => {
-            html += '<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">';
-            html += '<td style="padding: 10px 0;"><code>' + t.name + '</code></td>';
-            html += '<td>' + t.remote_address + '</td>';
-            html += '<td><span class="status-badge badge-online">فعال</span></td>';
-            html += '</tr>';
-        });
+        html += '<tr style="border-bottom: 1px solid var(--border-subtle); color: var(--text-muted);"><th style="padding: 10px 0;">نام اینترفیس</th><th>IP سرور خارج</th><th>پورت و پروتکل</th><th>وضعیت</th></tr>';
+        if (tunnels.length === 0) {
+            html += '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">هیچ تونل فعالی یافت نشد. با کلیک روی «ستاپ و کانفیگ» می‌توانید تونل جدید اضافه کنید.</td></tr>';
+        } else {
+            tunnels.forEach(t => {
+                html += '<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">';
+                html += '<td style="padding: 12px 0;"><code style="color: var(--primary); font-weight: 600;">' + t.name + '</code></td>';
+                html += '<td>' + (t.remote_address || '—') + '</td>';
+                html += '<td><span class="tag-pill">UDP/TCP</span></td>';
+                html += '<td><span class="status-badge badge-online">● فعال</span></td>';
+                html += '</tr>';
+            });
+        }
         html += '</table>';
         document.getElementById('tunListContent').innerHTML = html;
         openModal('tunnelsModal');
@@ -191,27 +197,27 @@ async function showLogsModal() {
         const res = await fetch('/api/commands-log');
         const logs = await res.json();
         if (logs.length === 0) {
-            alert('هنوز دستوری ثبت نشده است. ابتدا روی دکمه «تست افزودن کشور جدید» کلیک کنید!');
+            alert('هنوز دستوری ثبت نشده است.');
             return;
         }
-        let all = logs.map(l => '# --- عملیات ' + l.destination + ' روی سرور ' + l.server + ' ---\n' + l.commands.join('\n')).join('\n\n');
-        document.getElementById('resultTitle').innerText = '📜 لاگ تمام دستورات تولیدشده میکروتیک';
+        let all = logs.map(l => '# --- عملیات ' + l.destination + ' روی روتر ' + l.server + ' ---\n' + l.commands.join('\n')).join('\n\n');
+        document.getElementById('resultTitle').innerText = '📜 لاگ تمام دستورات ارسال‌شده به روتر';
         document.getElementById('resultCode').innerText = all;
         openModal('resultModal');
-    } catch (err) { alert('خطا در دریافت لاگ‌ها: ' + err.message); }
+    } catch (err) { alert('خطا: ' + err.message); }
 }
 
 // Delete server
 async function deleteServer(id) {
-    if (confirm('آیا از حذف این سرور اطمینان دارید؟')) {
+    if (confirm('آیا از حذف این روتر اطمینان دارید؟')) {
         await fetch('/api/servers/' + id, { method: 'DELETE' });
         window.location.reload();
     }
 }
 
-
-
-// --- SMART MULTI-SCENARIO INTERACTIVE WIZARD ---
+// ========================================================
+// SMART MULTI-SCENARIO INTERACTIVE WIZARD (CLEAN & GUIDED)
+// ========================================================
 let activeWizardScenario = 'full'; // 'full' | 'adopt' | 'services_only'
 let wizCurrentStep = 1;
 let wizServerId = null;
@@ -221,7 +227,7 @@ let allExecutedWizardCommands = [];
 let addedDestinationsList = [];
 let cachedFleetServers = [];
 
-// Customizable Countries List with custom ports and protocols
+// Beautiful Curated Country Cards with Smart Defaults
 let customizableCountriesList = [
     { checked: true, code: 'de', flag: '🇩🇪', label: 'آلمان', port: 6066, proto: 'udp', type: 'gre', remote_ip: '91.99.129.82', local_30: '40.40.40.2/30', gw_30: '40.40.40.1', pool: '10.18.1.2-10.18.1.200', subnet: '10.18.1.0/24' },
     { checked: true, code: 'usa', flag: '🇺🇸', label: 'آمریکا', port: 6065, proto: 'udp', type: 'gre', remote_ip: '69.197.190.75', local_30: '10.10.11.2/30', gw_30: '10.10.11.1', pool: '10.17.1.2-10.17.1.200', subnet: '10.17.1.0/24' },
@@ -233,18 +239,21 @@ let customizableCountriesList = [
     { checked: false, code: 'trk', flag: '🇹🇷', label: 'ترکیه', port: 6058, proto: 'udp', type: 'gre', remote_ip: '188.132.174.132', local_30: '10.10.12.2/30', gw_30: '10.10.12.1', pool: '10.11.1.2-10.11.1.200', subnet: '10.11.1.0/24' }
 ];
 
-// Launch Wizard Modal
+// Open Wizard Modal
 async function openWizardModal() {
     wizCurrentStep = 1;
     wizServerId = null;
     allExecutedWizardCommands = [];
     addedDestinationsList = [];
     
-    // Clear consoles
-    document.querySelectorAll('.wiz-console').forEach(c => { c.style.display = 'none'; c.innerText = ''; });
+    // Clear console windows
+    ['consoleStep1Window', 'consoleStep2Window', 'consoleStep3Window', 'consoleStep4Window'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    document.querySelectorAll('.wiz-console').forEach(c => c.innerText = '');
     document.querySelectorAll('.wiz-next-btn').forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
     
-    // Reset screens
     document.getElementById('wizardScenarioPicker').style.display = 'block';
     document.getElementById('wizardScenarioSteps').style.display = 'none';
     
@@ -253,7 +262,7 @@ async function openWizardModal() {
         const res = await fetch('/api/servers');
         cachedFleetServers = await res.json();
         const sel = document.getElementById('wiz_fleet_select');
-        sel.innerHTML = '<option value="">+ افزودن و کانفیگ سرور جدید (دستی)</option>';
+        sel.innerHTML = '<option value="">+ افزودن روتر جدید به صورت دستی</option>';
         cachedFleetServers.forEach(s => {
             const opt = document.createElement('option');
             opt.value = s.id;
@@ -266,6 +275,16 @@ async function openWizardModal() {
 
     renderCustomizableCountryRows();
     openModal('wizardModal');
+}
+
+// 1-Click Launch from Server Card
+async function launchWizardForServer(serverId, serverName, serverHost) {
+    await openWizardModal();
+    const sel = document.getElementById('wiz_fleet_select');
+    sel.value = serverId;
+    onFleetServerSelect();
+    selectWizardScenario('full');
+    executeStep1WithScan();
 }
 
 // Fleet server select onchange
@@ -304,23 +323,23 @@ function selectWizardScenario(scenario) {
     const stepTitle4 = document.getElementById('stepTitle4');
 
     if (scenario === 'full') {
-        badge.innerText = '🟢 سناریوی ۱: راه‌اندازی کامل روتر خام (Full Clean Setup)';
-        badge.style.color = 'var(--accent)';
-        badge.style.borderColor = 'var(--accent)';
+        badge.innerText = '🟢 سناریوی ۱: راه‌اندازی کامل روتر خام (Fresh Setup)';
+        badge.style.color = 'var(--primary)';
+        badge.style.borderColor = 'var(--primary)';
         stepInd2.style.display = 'flex';
         stepInd3.style.display = 'flex';
         stepInd4.style.display = 'flex';
-        stepTitle4.innerText = 'تونل‌های خروجی';
+        stepTitle4.innerText = 'کشورها و پورت‌ها';
     } else if (scenario === 'adopt') {
-        badge.innerText = '🔵 سناریوی ۲: همگام‌سازی تونل‌های موجود (Adopt Tunnels)';
+        badge.innerText = '🔵 سناریوی ۲: همگام‌سازی تونل‌های موجود (Adopt)';
         badge.style.color = 'var(--success)';
         badge.style.borderColor = 'var(--success)';
         stepInd2.style.display = 'none';
         stepInd3.style.display = 'none';
         stepInd4.style.display = 'flex';
-        stepTitle4.innerText = 'همگام‌سازی تونل‌ها (Adopt)';
+        stepTitle4.innerText = 'همگام‌سازی تونل‌ها';
     } else if (scenario === 'services_only') {
-        badge.innerText = '🟣 سناریوی ۳: فقط سرتیفیکت و فایروال (Services Only)';
+        badge.innerText = '🟣 سناریوی ۳: فقط سرتیفیکت و فایروال (Services)';
         badge.style.color = 'var(--warning)';
         badge.style.borderColor = 'var(--warning)';
         stepInd2.style.display = 'flex';
@@ -380,65 +399,97 @@ function toggleCertModeFields() {
     document.getElementById('wiz_upload_box').style.display = mode === 'upload' ? 'block' : 'none';
 }
 
-// Tunnel UI toggle
-function toggleTunnelTypeFields() {
-    const isL2tp = document.getElementById('wiz_tun_type').value === 'l2tp_ether';
-    document.getElementById('wiz_l2tp_specific_fields').style.display = isL2tp ? 'grid' : 'none';
-}
-
-// --- RENDER CUSTOMIZABLE COUNTRY ROWS (STEP 4) ---
+// ==============================================
+// MODERN COUNTRY CARDS (CUSTOM PORTS & PROTOCOLS)
+// ==============================================
 function renderCustomizableCountryRows() {
     const container = document.getElementById('countryCustomList');
     if (!container) return;
     container.innerHTML = '';
 
     customizableCountriesList.forEach((item, idx) => {
-        const row = document.createElement('div');
-        row.className = 'country-custom-row';
-        row.id = `c_row_${idx}`;
+        const card = document.createElement('div');
+        card.className = `country-item-card ${item.checked ? 'selected' : ''}`;
+        card.id = `c_card_${idx}`;
 
-        row.innerHTML = `
-            <div>
-                <input type="checkbox" id="c_chk_${idx}" ${item.checked ? 'checked' : ''} onchange="customizableCountriesList[${idx}].checked = this.checked">
+        card.innerHTML = `
+            <div class="country-card-header">
+                <div class="country-flag-title">
+                    <span class="country-flag-icon">${item.flag || '🌐'}</span>
+                    <div>
+                        <strong style="color: #fff; font-size: 0.95rem;">${item.label}</strong>
+                        <span style="font-size: 0.75rem; color: var(--text-dim); display: block; font-family: var(--font-mono);">${item.code.toUpperCase()}</span>
+                    </div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="c_chk_${idx}" ${item.checked ? 'checked' : ''} onchange="toggleCountrySelection(${idx}, this.checked)">
+                    <span class="slider"></span>
+                </label>
             </div>
-            <div>
-                <strong style="color: #fff; font-size: 0.88rem;">${item.flag || '🌐'} ${item.label}</strong>
-                <span style="font-size: 0.72rem; color: var(--text-muted); display: block;"><code>${item.code}</code></span>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
+                <div>
+                    <label style="font-size: 0.74rem; color: var(--text-muted); display: block; margin-bottom: 2px;">پورت OpenVPN</label>
+                    <input type="number" id="c_port_${idx}" value="${item.port}" style="font-family: var(--font-mono); font-weight: 600;" onchange="customizableCountriesList[${idx}].port = parseInt(this.value)">
+                </div>
+                <div>
+                    <label style="font-size: 0.74rem; color: var(--text-muted); display: block; margin-bottom: 2px;">پروتکل</label>
+                    <div class="segmented-control" style="width: 100%;">
+                        <button type="button" class="segmented-btn ${item.proto === 'udp' ? 'active' : ''}" id="btn_proto_udp_${idx}" onclick="setCountryProto(${idx}, 'udp')">UDP</button>
+                        <button type="button" class="segmented-btn ${item.proto === 'tcp' ? 'active' : ''}" id="btn_proto_tcp_${idx}" onclick="setCountryProto(${idx}, 'tcp')">TCP</button>
+                    </div>
+                </div>
             </div>
-            <div>
-                <input type="number" id="c_port_${idx}" value="${item.port}" title="پورت اختصاصی OpenVPN" onchange="customizableCountriesList[${idx}].port = parseInt(this.value)">
-            </div>
-            <div>
-                <select id="c_proto_${idx}" onchange="customizableCountriesList[${idx}].proto = this.value">
-                    <option value="udp" ${item.proto === 'udp' ? 'selected' : ''}>UDP</option>
-                    <option value="tcp" ${item.proto === 'tcp' ? 'selected' : ''}>TCP</option>
-                </select>
-            </div>
-            <div>
-                <select id="c_type_${idx}" onchange="customizableCountriesList[${idx}].type = this.value">
-                    <option value="gre" ${item.type === 'gre' ? 'selected' : ''}>GRE</option>
-                    <option value="l2tp_ether" ${item.type === 'l2tp_ether' ? 'selected' : ''}>L2TP-Ether</option>
-                </select>
-            </div>
-            <div>
-                <input type="text" id="c_ip_${idx}" value="${item.remote_ip}" placeholder="IP سرور خارج" onchange="customizableCountriesList[${idx}].remote_ip = this.value.trim()">
-            </div>
-            <div>
-                <button type="button" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.1rem;" onclick="removeCustomCountryRow(${idx})">✕</button>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+                <span class="tag-pill" style="font-size: 0.72rem;">تونل ${item.type.toUpperCase()}</span>
+                <span style="font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-mono);">${item.remote_ip}</span>
             </div>
         `;
-        container.appendChild(row);
+        container.appendChild(card);
     });
 }
 
+function toggleCountrySelection(idx, isChecked) {
+    customizableCountriesList[idx].checked = isChecked;
+    const card = document.getElementById(`c_card_${idx}`);
+    if (card) {
+        card.classList.toggle('selected', isChecked);
+    }
+}
+
+function toggleAllCountries(select) {
+    customizableCountriesList.forEach((c, idx) => {
+        c.checked = select;
+    });
+    renderCustomizableCountryRows();
+}
+
+function setCountryProto(idx, proto) {
+    customizableCountriesList[idx].proto = proto;
+    const btnUdp = document.getElementById(`btn_proto_udp_${idx}`);
+    const btnTcp = document.getElementById(`btn_proto_tcp_${idx}`);
+    if (btnUdp && btnTcp) {
+        btnUdp.classList.toggle('active', proto === 'udp');
+        btnTcp.classList.toggle('active', proto === 'tcp');
+    }
+}
+
 function addCustomCountryRow() {
+    const countryName = prompt('نام کشور یا مقصد جدید را وارد کنید (مثال: فرانسه یا France):', 'فرانسه');
+    if (!countryName) return;
+    const code = prompt('کد کوتاه انگلیسی کشور (مثال: fr یا uae):', 'fr');
+    if (!code) return;
+    const port = prompt('شماره پورت اختصاصی OpenVPN:', '6070');
+    if (!port) return;
+
     const nextIdx = customizableCountriesList.length + 1;
     const newCountry = {
         checked: true,
-        code: `c${nextIdx}`,
+        code: code.toLowerCase().trim(),
         flag: '🌐',
-        label: `مقصد ${nextIdx}`,
-        port: 6070 + nextIdx,
+        label: countryName.trim(),
+        port: parseInt(port) || 6070,
         proto: 'udp',
         type: 'gre',
         remote_ip: '1.2.3.4',
@@ -451,37 +502,31 @@ function addCustomCountryRow() {
     renderCustomizableCountryRows();
 }
 
-function removeCustomCountryRow(idx) {
-    customizableCountriesList.splice(idx, 1);
-    renderCustomizableCountryRows();
-}
-
-// --- EXECUTE BATCH CUSTOM COUNTRIES (STEP 4) ---
+// Execute Batch Custom Countries
 async function executeBatchCustomCountries() {
     const btn = document.getElementById('btnExecBatchCountries');
     const consoleBox = document.getElementById('consoleStep4');
+    const windowBox = document.getElementById('consoleStep4Window');
     const nextBtn = document.getElementById('btnNextStep4');
     const addedBox = document.getElementById('wiz_added_tunnels_box');
 
-    // Collect checked countries with their current DOM values
     const selectedDests = [];
     customizableCountriesList.forEach((item, idx) => {
-        const isChecked = document.getElementById(`c_chk_${idx}`) ? document.getElementById(`c_chk_${idx}`).checked : item.checked;
+        const chk = document.getElementById(`c_chk_${idx}`);
+        const isChecked = chk ? chk.checked : item.checked;
         if (isChecked) {
-            const port = parseInt(document.getElementById(`c_port_${idx}`).value) || item.port;
-            const proto = document.getElementById(`c_proto_${idx}`).value || item.proto;
-            const tunType = document.getElementById(`c_type_${idx}`).value || item.type;
-            const remoteIp = document.getElementById(`c_ip_${idx}`).value.trim() || item.remote_ip;
+            const portInput = document.getElementById(`c_port_${idx}`);
+            const port = portInput ? (parseInt(portInput.value) || item.port) : item.port;
 
             selectedDests.push({
                 name: item.code.toLowerCase(),
                 country_label: item.label,
-                tunnel_type: tunType,
-                remote_ip: remoteIp,
+                tunnel_type: item.type,
+                remote_ip: item.remote_ip,
                 tunnel_local_ip: item.local_30 || `40.${idx+10}.1.2/30`,
                 tunnel_remote_ip: item.gw_30 || `40.${idx+10}.1.1`,
                 ovpn_port: port,
-                ovpn_protocol: proto,
+                ovpn_protocol: item.proto,
                 ovpn_certificate: 'server-template',
                 client_pool_range: item.pool || `10.${idx+20}.1.2-10.${idx+20}.1.200`,
                 client_gateway_ip: item.gw_30 ? item.pool.split('-')[0].replace(/\.[0-9]+$/, '.1') : `10.${idx+20}.1.1`,
@@ -499,10 +544,8 @@ async function executeBatchCustomCountries() {
 
     btn.disabled = true;
     btn.innerText = `⏳ در حال پیکربندی ${selectedDests.length} کشور با پورت و پروتکل سفارشی...`;
-    consoleBox.style.display = 'block';
-    consoleBox.innerText = `# [گام ۴] در حال ساخت ${selectedDests.length} مسیر روتینگ، Killswitch و OpenVPN Server...
-
-`;
+    windowBox.style.display = 'block';
+    consoleBox.innerText = `# [گام ۴] در حال ساخت ${selectedDests.length} مسیر روتینگ، Killswitch و OpenVPN Server...\n\n`;
 
     try {
         const res = await fetch('/api/wizard/step4-batch-tunnels', {
@@ -519,7 +562,6 @@ async function executeBatchCustomCountries() {
         btn.style.background = 'var(--success)';
         btn.style.color = '#000';
 
-        // Render summary badges
         addedBox.innerHTML = '';
         selectedDests.forEach(d => {
             const badge = document.createElement('span');
@@ -539,16 +581,17 @@ async function executeBatchCustomCountries() {
     }
 }
 
-// --- STEP 1: CONNECT & AUTO-SCAN ---
+// Step 1: Connect
 async function executeStep1WithScan() {
     const btn = document.getElementById('btnExecStep1');
     const consoleBox = document.getElementById('consoleStep1');
+    const windowBox = document.getElementById('consoleStep1Window');
     const nextBtn = document.getElementById('btnNextStep1');
     const alertBox = document.getElementById('wiz_detected_alert');
 
     btn.disabled = true;
     btn.innerText = '⏳ در حال تست اتصال به میکروتیک...';
-    consoleBox.style.display = 'block';
+    windowBox.style.display = 'block';
     consoleBox.innerText = '# [1/4] در حال برقراری ارتباط با پورت API روتر (8728)...\n';
     alertBox.style.display = 'none';
 
@@ -594,8 +637,7 @@ async function executeStep1WithScan() {
                 document.getElementById('wiz_found_cert_notice').style.display = 'block';
                 document.getElementById('rad_cert_existing').checked = true;
                 toggleCertModeFields();
-                consoleBox.innerText += `✅ تعداد ${certs.length} سرتیفیکت روی روتر شناسایی شد: [${certs.map(c=>c.name).join(', ')}]
-`;
+                consoleBox.innerText += `✅ تعداد ${certs.length} سرتیفیکت روی روتر شناسایی شد: [${certs.map(c=>c.name).join(', ')}]\n`;
             } else {
                 document.getElementById('wiz_found_cert_notice').style.display = 'none';
                 document.getElementById('rad_cert_self_signed').checked = true;
@@ -611,8 +653,7 @@ async function executeStep1WithScan() {
             const tRes = await fetch('/api/servers/' + wizServerId + '/detected-tunnels');
             detectedTunnelsList = await tRes.json();
             if (detectedTunnelsList && detectedTunnelsList.length > 0) {
-                consoleBox.innerText += `✅ تعداد ${detectedTunnelsList.length} تونل روی روتر کشف شد: [${detectedTunnelsList.map(t=>t.name).join(', ')}]
-`;
+                consoleBox.innerText += `✅ تعداد ${detectedTunnelsList.length} تونل روی روتر کشف شد: [${detectedTunnelsList.map(t=>t.name).join(', ')}]\n`;
                 alertBox.style.display = 'block';
                 alertBox.style.background = 'rgba(16, 185, 129, 0.1)';
                 alertBox.style.border = '1px solid rgba(16, 185, 129, 0.3)';
@@ -647,15 +688,16 @@ function proceedFromStep1() {
     }
 }
 
-// --- STEP 2: CERTIFICATE EXECUTE ---
+// Step 2: Cert
 async function executeStep2Cert() {
     const btn = document.getElementById('btnExecStep2');
     const consoleBox = document.getElementById('consoleStep2');
+    const windowBox = document.getElementById('consoleStep2Window');
     const nextBtn = document.getElementById('btnNextStep2');
 
     btn.disabled = true;
     btn.innerText = '⏳ در حال اعمال تنظیمات سرتیفیکت...';
-    consoleBox.style.display = 'block';
+    windowBox.style.display = 'block';
 
     const certMode = document.querySelector('input[name="wiz_cert_mode"]:checked').value;
     let chosenCertName = document.getElementById('wiz_cert_name').value.trim();
@@ -693,15 +735,16 @@ async function executeStep2Cert() {
     }
 }
 
-// --- STEP 3: SERVICES (RADIUS, IKEV2 & IRAN FETCH) ---
+// Step 3: Services
 async function executeStep3Services() {
     const btn = document.getElementById('btnExecStep3');
     const consoleBox = document.getElementById('consoleStep3');
+    const windowBox = document.getElementById('consoleStep3Window');
     const nextBtn = document.getElementById('btnNextStep3');
 
     btn.disabled = true;
     btn.innerText = '⏳ در حال اعمال RADIUS، IKEv2 و اسکریپت ایران...';
-    consoleBox.style.display = 'block';
+    windowBox.style.display = 'block';
 
     const payload = {
         server_id: wizServerId,
@@ -742,76 +785,20 @@ function onFinishStep3() {
     }
 }
 
-// --- STEP 4: SINGLE ADVANCED TUNNEL EXECUTE ---
-async function executeStep4AddTunnel() {
-    const consoleBox = document.getElementById('consoleStep4');
-    const nextBtn = document.getElementById('btnNextStep4');
-    const addedBox = document.getElementById('wiz_added_tunnels_box');
-
-    const tunType = document.getElementById('wiz_tun_type').value;
-    const dest = {
-        name: document.getElementById('wiz_tun_name').value.trim().toLowerCase(),
-        country_label: document.getElementById('wiz_tun_label').value.trim(),
-        tunnel_type: tunType,
-        remote_ip: document.getElementById('wiz_tun_remote').value.trim(),
-        tunnel_local_ip: document.getElementById('wiz_tun_local_ip').value.trim(),
-        tunnel_remote_ip: document.getElementById('wiz_tun_remote_gw').value.trim(),
-        ovpn_port: parseInt(document.getElementById('wiz_tun_ovpn_port').value),
-        ovpn_protocol: document.getElementById('wiz_tun_ovpn_proto').value,
-        ovpn_certificate: 'server-template',
-        client_pool_range: '10.25.1.2-10.25.1.200',
-        client_gateway_ip: '10.25.1.1',
-        client_subnet: '10.25.1.0/24',
-        enable_killswitch: true,
-        bypass_iran: true,
-        local_tunnel_id: parseInt(document.getElementById('wiz_l2tp_ltid').value) || 33,
-        remote_tunnel_id: parseInt(document.getElementById('wiz_l2tp_rtid').value) || 22,
-        local_session_id: parseInt(document.getElementById('wiz_l2tp_lsid').value) || 333,
-        remote_session_id: parseInt(document.getElementById('wiz_l2tp_rsid').value) || 222
-    };
-
-    consoleBox.style.display = 'block';
-    consoleBox.innerText = '⏳ در حال ساخت تونل اختصاصی...\n';
-
-    try {
-        const res = await fetch('/api/wizard/step4-tunnel', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ server_id: wizServerId, destination: dest })
-        });
-        const data = await res.json();
-        allExecutedWizardCommands.push(...data.commands);
-        addedDestinationsList.push(dest);
-
-        consoleBox.innerText = '✅ ' + data.message + '\n\n' + data.commands.join('\n');
-        
-        const badge = document.createElement('span');
-        badge.className = 'tag-pill';
-        badge.style.margin = '4px';
-        badge.style.color = 'var(--success)';
-        badge.innerText = `✅ ${dest.country_label} (${dest.tunnel_type.toUpperCase()} | ${dest.ovpn_port} ${dest.ovpn_protocol.toUpperCase()})`;
-        addedBox.appendChild(badge);
-
-        nextBtn.disabled = false;
-        nextBtn.style.opacity = '1';
-    } catch (err) {
-        consoleBox.innerText = '❌ خطا: ' + err.message;
-    }
-}
-
-// --- SCENARIO 2: ADOPT EXISTING TUNNELS WITH PROTOCOL SELECTOR ---
+// Scenario 2: Adopt Tunnels
 function renderAdoptTunnels() {
     const container = document.getElementById('wizAdoptTunnelsContainer');
     container.innerHTML = '';
     
     if (!detectedTunnelsList || detectedTunnelsList.length === 0) {
-        container.innerHTML = '<div style="color: var(--text-muted); padding: 1.5rem; text-align: center;">هیچ اینترفیس تونل GRE یا L2TP روی روتر کشف نشد. پیشنهاد می‌شود سناریوی ۱ (راه‌اندازی کامل روتر خام) را انتخاب فرمایید.</div>';
+        container.innerHTML = '<div style="color: var(--text-muted); padding: 2rem; text-align: center; background: rgba(30, 41, 59, 0.4); border-radius: var(--radius-md);">هیچ اینترفیس تونل GRE یا L2TP روی روتر کشف نشد. پیشنهاد می‌شود سناریوی ۱ (راه‌اندازی کامل روتر خام) را انتخاب فرمایید.</div>';
         return;
     }
 
     detectedTunnelsList.forEach((tun, idx) => {
         const card = document.createElement('div');
-        card.className = 'adopt-tunnel-card';
+        card.className = 'country-item-card';
+        card.style.marginBottom = '12px';
         
         const cleanName = tun.name.replace(/^gre-/, '').replace(/^l2tp-/, '').replace(/^to-/, '');
         const defaultPort = 6050 + idx;
@@ -820,20 +807,21 @@ function renderAdoptTunnels() {
         const defaultSubnet = `10.${20 + idx}.1.0/24`;
 
         card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <strong style="font-size: 1rem; color: #fff;">اینترفیس: <code>${tun.name}</code></strong>
-                    <span class="tag-pill" style="margin-right: 8px; color: var(--accent);">${tun.type.toUpperCase()}</span>
-                    <span style="font-size: 0.8rem; color: var(--text-muted);">IP ریموت: ${tun.remote_ip || 'نامشخص'} | رنج داخلی: ${tun.local_ip_30 || 'نامشخص'}</span>
+                    <strong style="font-size: 1.05rem; color: #fff;">اینترفیس: <code>${tun.name}</code></strong>
+                    <span class="tag-pill" style="margin-right: 8px; color: var(--primary);">${tun.type.toUpperCase()}</span>
+                    <span style="font-size: 0.8rem; color: var(--text-muted); margin-right: 8px;">IP ریموت: ${tun.remote_ip || 'نامشخص'}</span>
                 </div>
                 <button type="button" class="btn btn-primary" id="btnAdopt_${idx}" onclick="adoptSingleTunnel(${idx}, '${tun.name}', '${tun.type}', '${defaultGw}')">⚡ ساخت روتینگ و OpenVPN</button>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px; font-size: 0.85rem;">
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px; font-size: 0.85rem; margin-top: 8px;">
                 <div><label>کد مقصد:</label><input type="text" id="ad_code_${idx}" value="${cleanName}"></div>
                 <div><label>پورت OpenVPN:</label><input type="number" id="ad_port_${idx}" value="${defaultPort}"></div>
                 <div>
                     <label>پروتکل:</label>
-                    <select id="ad_proto_${idx}" style="background: #161e31; color: #fff; border: 1px solid var(--border-color); padding: 6px; border-radius: 6px; width: 100%;">
+                    <select id="ad_proto_${idx}">
                         <option value="udp" selected>UDP</option>
                         <option value="tcp">TCP</option>
                     </select>
@@ -927,7 +915,6 @@ async function adoptAllDetectedTunnels() {
         const data = await res.json();
         allExecutedWizardCommands.push(...data.commands);
 
-        // Turn all buttons green
         detectedTunnelsList.forEach((tun, idx) => {
             const b = document.getElementById('btnAdopt_' + idx);
             if (b) {
@@ -946,15 +933,15 @@ async function adoptAllDetectedTunnels() {
     }
 }
 
-// --- STEP 5: SUMMARY & COPY ---
+// Step 5: Summary
 function renderFinalSummary() {
     const box = document.getElementById('wizardFinalSummaryBox');
     let html = '<ul style="padding-right: 20px;">';
-    html += `<li><strong>نام روتر هدف:</strong> ${wizServerName} (شناسه: <code>${wizServerId}</code>)</li>`;
+    html += `<li><strong>نام روتر:</strong> ${wizServerName} (<code>${wizServerId}</code>)</li>`;
     html += `<li><strong>سناریوی اجراشده:</strong> ${activeWizardScenario.toUpperCase()}</li>`;
-    html += `<li><strong>مجموع دستورات ارسال‌شده به میکروتیک:</strong> ${allExecutedWizardCommands.length} خط CLI</li>`;
-    html += `<li><strong>وضعیت Killswitch (Blackhole):</strong> فعال (Distance 10)</li>`;
-    html += `<li><strong>بای‌پس ترافیک داخل کشور:</strong> رول Mangle <code>dst-address-list=!IRAN</code> فعال</li>`;
+    html += `<li><strong>تعداد کل دستورات اجرا شده:</strong> ${allExecutedWizardCommands.length} خط CLI RouterOS</li>`;
+    html += `<li><strong>امنیت Killswitch:</strong> فعال با رول Blackhole (Distance 10)</li>`;
+    html += `<li><strong>بای‌پس ایران:</strong> رول Mangle پری‌روتینگ با <code>dst-address-list=!IRAN</code> فعال</li>`;
     html += '</ul>';
     box.innerHTML = html;
 }
@@ -965,7 +952,7 @@ function copyAllWizardCommands() {
         return;
     }
     navigator.clipboard.writeText(allExecutedWizardCommands.join('\n')).then(() => {
-        alert('📋 تمام دستورات اجراشده میکروتیک با موفقیت در کلیپ‌بورد کپی شد!');
+        alert('📋 تمام دستورات با موفقیت در کلیپ‌بورد کپی شد!');
     }).catch(() => {
         prompt('دستورات جهت کپی:', allExecutedWizardCommands.join('\n'));
     });

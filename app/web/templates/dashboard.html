@@ -3,177 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MikroTik Fleet Orchestrator (Simulator Mode)</title>
+    <title>MikroTik Fleet Orchestrator | پنل هوشمند مدیریت و کانفیگ ناوگان روترها</title>
     <link rel="stylesheet" href="/static/css/style.css">
-    <style>
-        .mock-banner {
-            background: linear-gradient(90deg, rgba(56, 189, 248, 0.15), rgba(16, 185, 129, 0.15));
-            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
-            padding: 10px 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.9rem;
-        }
-        .code-block {
-            background: #090d16;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: monospace;
-            font-size: 0.85rem;
-            color: #38bdf8;
-            overflow-x: auto;
-            direction: ltr;
-            text-align: left;
-            line-height: 1.6;
-            margin-top: 10px;
-        }
-        .tag-pill {
-            background: rgba(255, 255, 255, 0.08);
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-        .tab-btn {
-            background: none;
-            border: none;
-            padding: 8px 16px;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-weight: 600;
-            border-bottom: 2px solid transparent;
-        }
-        .tab-btn.active {
-            color: var(--accent);
-            border-bottom: 2px solid var(--accent);
-        }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
+<!-- Top Simulator Notification Bar -->
 <div class="mock-banner">
-    <div>
-        <span>🧪 <strong>حالت تست و شبیه‌ساز (Simulator Mode) فعال است:</strong> تمام عملیات بدون اتصال به روتر فیزیکی شبیه‌سازی می‌شوند.</span>
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="live-dot" style="background: var(--primary);"></span>
+        <span><strong>حالت شبیه‌ساز (Simulator Mode) فعال است:</strong> تمام عملیات کانفیگ و روتینگ به صورت ایمن و آزمایشی تست می‌شوند.</span>
     </div>
     <div>
-        <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="showLogsModal()">📜 مشاهده لاگ دستورات میکروتیک</button>
+        <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="showLogsModal()">📜 مشاهده لاگ دستورات روتر</button>
     </div>
 </div>
 
+<!-- Main Top Navbar -->
 <nav class="navbar">
     <div class="logo">
-        <span>⚡ MikroTik Fleet Orchestrator</span>
+        <span style="font-size: 1.5rem;">⚡</span>
+        <span>MikroTik Fleet Orchestrator</span>
     </div>
-    <div>
-        <span style="font-size: 0.85rem; color: var(--text-muted);">نسخه: {{ app_version }} | حالت: Demo & Test</span>
+    <div style="display: flex; align-items: center; gap: 14px;">
+        <span class="tag-pill">نسخه {{ app_version }}</span>
+        <button class="btn btn-secondary" onclick="openModal('addServerModal')">➕ اتصال روتر جدید</button>
+        <button class="btn btn-primary" onclick="openWizardModal()">🚀 ویزارد راه‌اندازی و کانفیگ هوشمند</button>
     </div>
 </nav>
 
 <div class="container">
+    <!-- Fleet Statistics Grid -->
     <div class="stats-grid">
         <div class="stat-card">
-            <span class="stat-label">مجموع کاربران آنلاین (تست)</span>
-            <span class="stat-value" style="color: var(--accent);">{{ total_users }}</span>
+            <span class="stat-label">👥 مجموع کاربران فعال</span>
+            <span class="stat-value" style="color: var(--primary);">{{ total_users }}</span>
+            <span style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">اتصال‌های زنده PPP و IKEv2</span>
         </div>
         <div class="stat-card">
-            <span class="stat-label">سرورهای در دسترس</span>
-            <span class="stat-value" style="color: var(--success);">{{ online_count }} / {{ total_count }}</span>
+            <span class="stat-label">🖥️ وضعیت روترهای ناوگان</span>
+            <div style="display: flex; align-items: baseline; gap: 8px;">
+                <span class="stat-value" style="color: var(--success);">{{ online_count }}</span>
+                <span style="font-size: 1.1rem; color: var(--text-muted); font-family: var(--font-mono);">/ {{ total_count }} روتر فعال</span>
+            </div>
+            <span style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">آماده مسیریابی و ایجاد تونل</span>
         </div>
         <div class="stat-card">
-            <span class="stat-label">وضعیت RADIUS & IKEv2</span>
-            <span class="stat-value" style="font-size: 1.2rem; color: var(--text-muted); margin-top: 8px;">EAP-RADIUS Active</span>
+            <span class="stat-label">🛡️ امنیت و فایروال مرکزی</span>
+            <span class="stat-value" style="font-size: 1.25rem; color: var(--accent-violet, #818cf8); margin-top: 4px;">RADIUS & Killswitch</span>
+            <span style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">بای‌پس ایران (!IRAN) فعال</span>
         </div>
     </div>
 
+    <!-- Actions Bar -->
     <div class="actions-bar">
-        <h2>سرورهای ناوگان میکروتیک</h2>
+        <h2>
+            <span>🖥️ روترهای ناوگان شما</span>
+            <span class="tag-pill">{{ total_count }} سرور</span>
+        </h2>
         <div style="display: flex; gap: 10px;">
-            <button class="btn btn-primary" style="background: linear-gradient(135deg, #38bdf8, #818cf8); color: #000; font-weight: 700;" onclick="openWizardModal()">🚀 ویزارد راه‌اندازی سرور جدید (Step-by-Step)</button>
-            <button class="btn btn-secondary" onclick="openModal('addDestModal')">🌍 + افزودن کشور</button>
-            <button class="btn btn-secondary" onclick="openModal('addServerModal')">+ افزودن سرور به لیست</button>
+            <button class="btn btn-secondary" onclick="openModal('addDestModal')">🌍 + افزودن کشور خروجی</button>
+            <button class="btn btn-primary" onclick="openWizardModal()">🚀 ویزارد راه‌اندازی روتر (Smart Setup)</button>
         </div>
     </div>
 
+    <!-- Server Cards List -->
     <div id="serverList">
         {% for s in servers %}
         <div class="server-card">
             <div>
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
-                    <h3 style="font-size: 1.15rem;">{{ s.name }}</h3>
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                    <span class="live-dot" style="{% if not s.online %}background: var(--danger); box-shadow: 0 0 8px var(--danger); animation: none;{% endif %}"></span>
+                    <h3 style="font-size: 1.2rem; font-weight: 700; color: #fff;">{{ s.name }}</h3>
                     <span class="status-badge {% if s.online %}badge-online{% else %}badge-offline{% endif %}">
-                        {% if s.online %}● آنلاین (شبیه‌ساز){% else %}○ آفلاین{% endif %}
+                        {% if s.online %}آنلاین (آماده){% else %}آفلاین{% endif %}
                     </span>
                     <span class="tag-pill">RouterOS {{ s.version or '7.x' }}</span>
                 </div>
-                <div style="font-size: 0.9rem; color: var(--text-muted);">
-                    <span>IP: {{ s.host }}</span> |
-                    <span>کاربران آنلاین: {{ s.ppp_active_users + s.ipsec_active_peers }}</span> |
-                    <span>تونل‌های فعال: {{ s.tunnels_count }}</span> |
-                    <span>Uptime: {{ s.uptime or '—' }}</span> |
-                    <span>مصرف CPU: {{ s.cpu_load or 0 }}%</span>
+                
+                <div style="display: flex; align-items: center; gap: 16px; font-size: 0.85rem; color: var(--text-muted); flex-wrap: wrap;">
+                    <span>🌐 آی‌پی: <code style="color: var(--primary); font-family: var(--font-mono); font-weight: 600;">{{ s.host }}</code></span>
+                    <span>👥 کاربران آنلاین: <strong style="color: #fff;">{{ s.ppp_active_users + s.ipsec_active_peers }}</strong></span>
+                    <span>🔗 تونل‌های فعال: <strong style="color: #fff;">{{ s.tunnels_count }} مقصد</strong></span>
+                    <span>⏱️ زمان روشن بودن: {{ s.uptime or '—' }}</span>
+                    <span>⚡ مصرف CPU: <strong style="color: #fff;">{{ s.cpu_load or 0 }}%</strong></span>
                 </div>
             </div>
+            
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button class="btn btn-secondary" onclick="viewServerTunnels('{{ s.id }}', '{{ s.name }}')">🌐 تونل‌ها</button>
-                <button class="btn btn-secondary" onclick="openCertModal('{{ s.id }}', '{{ s.name }}')">🔐 سرتیفیکت</button>
-                <button class="btn btn-secondary" onclick="syncIranList('{{ s.id }}', '{{ s.name }}')">🇮🇷 IPDeny ایران</button>
-                <button class="btn btn-secondary" style="color: var(--danger);" onclick="deleteServer('{{ s.id }}')">حذف</button>
+                <button class="btn btn-primary" style="padding: 6px 14px; font-size: 0.85rem;" onclick="launchWizardForServer('{{ s.id }}', '{{ s.name }}', '{{ s.host }}')">⚡ ستاپ و کانفیگ</button>
+                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="viewServerTunnels('{{ s.id }}', '{{ s.name }}')">🌐 تونل‌ها</button>
+                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="openCertModal('{{ s.id }}', '{{ s.name }}')">🔐 سرتیفیکت</button>
+                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="syncIranList('{{ s.id }}', '{{ s.name }}')">🇮🇷 آپدیت رنج ایران</button>
+                <button class="btn btn-secondary" style="color: var(--danger); padding: 6px 10px; font-size: 0.85rem;" onclick="deleteServer('{{ s.id }}')">حذف</button>
             </div>
         </div>
         {% else %}
-        <div style="text-align: center; padding: 4rem; color: var(--text-muted); background: var(--bg-card); border-radius: 12px;">
-            هنوز سروری اضافه نشده است.
+        <div style="text-align: center; padding: 4rem; color: var(--text-muted); background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-subtle);">
+            هنوز روتر میکروتیکی اضافه نشده است. برای شروع، دکمه «اتصال روتر جدید» یا «ویزارد راه‌اندازی» را کلیک کنید.
         </div>
         {% endfor %}
     </div>
 </div>
 
-<!-- Modal: Add Server -->
+<!-- ========================================== -->
+<!-- MODAL: ADD SERVER (QUICK FORM)             -->
+<!-- ========================================== -->
 <div id="addServerModal" class="modal">
-    <div class="modal-content">
-        <h3 style="margin-bottom: 1.5rem;">افزودن سرور میکروتیک جدید</h3>
+    <div class="modal-content" style="max-width: 540px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;">
+            <h3 style="font-size: 1.25rem;">➕ اتصال روتر میکروتیک جدید</h3>
+            <button type="button" class="btn btn-secondary" style="padding: 2px 8px;" onclick="closeModal('addServerModal')">✕</button>
+        </div>
         <form id="serverForm" onsubmit="submitServer(event)">
             <div class="form-group">
-                <label>شناسه / نام سرور</label>
+                <label>نام و عنوان روتر (Identity)</label>
                 <input type="text" id="srv_name" required placeholder="مثال: CHR-Tabriz-01">
             </div>
             <div class="form-group">
-                <label>آدرس IP یا دامنه سرور</label>
-                <input type="text" id="srv_host" required placeholder="مثال: 185.100.50.2">
+                <label>آدرس IP یا دامنه روتر</label>
+                <input type="text" id="srv_host" required placeholder="مثال: 95.216.100.50">
             </div>
-            <div class="form-group">
-                <label>پورت API میکروتیک (پیش‌فرض 8728)</label>
-                <input type="number" id="srv_api_port" value="8728" required>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label>پورت API (پیش‌فرض 8728)</label>
+                    <input type="number" id="srv_api_port" value="8728" required>
+                </div>
+                <div class="form-group">
+                    <label>پورت Winbox (پیش‌فرض 2020)</label>
+                    <input type="number" id="srv_winbox_port" value="2020">
+                </div>
             </div>
-            <div class="form-group">
-                <label>نام کاربری</label>
-                <input type="text" id="srv_user" value="admin" required>
-            </div>
-            <div class="form-group">
-                <label>رمز عبور</label>
-                <input type="password" id="srv_pass" placeholder="رمز عبور">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label>نام کاربری</label>
+                    <input type="text" id="srv_user" value="admin" required>
+                </div>
+                <div class="form-group">
+                    <label>رمز عبور</label>
+                    <input type="password" id="srv_pass" placeholder="رمز عبور میکروتیک">
+                </div>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('addServerModal')">انصراف</button>
-                <button type="submit" class="btn btn-primary">ثبت سرور</button>
+                <button type="submit" class="btn btn-primary">ثبت و ذخیره روتر</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Modal: Add Destination / Country -->
+<!-- ========================================== -->
+<!-- MODAL: ADD DESTINATION / COUNTRY           -->
+<!-- ========================================== -->
 <div id="addDestModal" class="modal">
     <div class="modal-content" style="max-width: 650px;">
-        <h3 style="margin-bottom: 0.5rem;">🌍 افزودن کشور / تونل خروجی جدید</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;">
+            <h3 style="font-size: 1.25rem;">🌍 افزودن کشور / مسیر خروجی جدید</h3>
+            <button type="button" class="btn btn-secondary" style="padding: 2px 8px;" onclick="closeModal('addDestModal')">✕</button>
+        </div>
         <form id="destForm" onsubmit="submitDestination(event)">
             <div class="form-group">
                 <label>🎯 هدف اعمال کانفیگ:</label>
-                <select id="dst_target_server" style="border: 1px solid var(--accent);">
-                    <option value="all">🌍 تمام سرورهای ناوگان (Fleet Broadcast)</option>
+                <select id="dst_target_server" style="border: 1px solid var(--primary);">
+                    <option value="all">🌍 تمام روترهای ناوگان (Fleet Broadcast)</option>
                     {% for s in servers %}
-                    <option value="{{ s.id }}">فقط سرور: {{ s.name }} ({{ s.host }})</option>
+                    <option value="{{ s.id }}">فقط روتر: {{ s.name }} ({{ s.host }})</option>
                     {% endfor %}
                 </select>
             </div>
@@ -197,14 +194,14 @@
                 </div>
                 <div class="form-group">
                     <label>پروتکل OpenVPN</label>
-                    <select id="dst_ovpn_protocol" style="width: 100%; background: #0f1422; color: #fff; border: 1px solid var(--border-color); padding: 8px; border-radius: 6px;">
+                    <select id="dst_ovpn_protocol">
                         <option value="udp" selected>UDP (سرعت بالا / پیش‌فرض)</option>
-                        <option value="tcp">TCP (مقاوم در برابر اختلال / پورت 443)</option>
+                        <option value="tcp">TCP (ضد اختلال / پورت 443)</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>نوع تونل</label>
-                    <select id="dst_tunnel_type" style="width: 100%; background: #0f1422; color: #fff; border: 1px solid var(--border-color); padding: 8px; border-radius: 6px;">
+                    <select id="dst_tunnel_type">
                         <option value="gre" selected>GRE Tunnel</option>
                         <option value="l2tp_ether">L2TP Ethernet (Pseudowire)</option>
                     </select>
@@ -223,39 +220,33 @@
                 <label>رنج Pool اختصاصی کاربران این کشور</label>
                 <input type="text" id="dst_pool_range" value="10.20.1.2-10.20.1.200" required>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div class="form-group">
-                    <label>Gateway کلاینت‌ها</label>
-                    <input type="text" id="dst_gw" value="10.20.1.1" required>
-                </div>
-                <div class="form-group">
-                    <label>Subnet کلاینت‌ها</label>
-                    <input type="text" id="dst_subnet" value="10.20.1.0/24" required>
-                </div>
-            </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('addDestModal')">انصراف</button>
-                <button type="submit" class="btn btn-primary">ایجاد خودکار تونل و روتینگ</button>
+                <button type="submit" class="btn btn-primary">⚡ ساخت خودکار تونل و روتینگ</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Modal: Certificate Manager (2 Options) -->
+<!-- ========================================== -->
+<!-- MODAL: CERTIFICATE MANAGER                 -->
+<!-- ========================================== -->
 <div id="certModal" class="modal">
-    <div class="modal-content" style="max-width: 650px;">
-        <h3 id="certServerTitle" style="margin-bottom: 1rem;">🔐 مدیریت سرتیفیکت میکروتیک</h3>
+    <div class="modal-content" style="max-width: 620px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;">
+            <h3 id="certServerTitle" style="font-size: 1.25rem;">🔐 مدیریت گواهی امنیتی (Certificate)</h3>
+            <button type="button" class="btn btn-secondary" style="padding: 2px 8px;" onclick="closeModal('certModal')">✕</button>
+        </div>
         
-        <div style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem;">
-            <button class="tab-btn active" id="btnTabSelfSigned" onclick="switchCertTab('selfSigned')">۱. ساخت خودکار روی میکروتیک (Self-Signed)</button>
-            <button class="tab-btn" id="btnTabUpload" onclick="switchCertTab('upload')">۲. آپلود فایل سرتیفیکت (CRT / Key)</button>
+        <div style="display: flex; border-bottom: 1px solid var(--border-subtle); margin-bottom: 1.5rem; gap: 8px;">
+            <button class="btn btn-secondary" id="btnTabSelfSigned" style="border-bottom: 2px solid var(--primary);" onclick="switchCertTab('selfSigned')">۱. ساخت خودکار روی روتر (Self-Signed)</button>
+            <button class="btn btn-secondary" id="btnTabUpload" onclick="switchCertTab('upload')">۲. آپلود فایل CRT و Key</button>
         </div>
 
-        <!-- Tab 1: Self-Signed -->
         <div id="tabSelfSigned">
             <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-                خود میکروتیک یک CA داخلی ساخته و سرتیفیکت <code>server-template</code> را به صورت خودکار Sign می‌کند (مناسب راه‌اندازی سریع).
+                روتر میکروتیک یک CA داخلی ایجاد کرده و سرتیفیکت <code>server-template</code> را به صورت اتوماتیک امضا و فعال می‌کند.
             </p>
             <form onsubmit="submitGenerateCert(event)">
                 <div class="form-group">
@@ -263,7 +254,7 @@
                     <input type="text" id="gen_cert_name" value="server-template" required>
                 </div>
                 <div class="form-group">
-                    <label>Common Name (CN)</label>
+                    <label>نام عمومی (Common Name)</label>
                     <input type="text" id="gen_common_name" value="server-template" required>
                 </div>
                 <div class="form-group">
@@ -272,126 +263,143 @@
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('certModal')">بستن</button>
-                    <button type="submit" class="btn btn-primary">تولید و Sign خودکار سرتیفیکت</button>
+                    <button type="submit" class="btn btn-primary">تولید و فعال‌سازی سرتیفیکت</button>
                 </div>
             </form>
         </div>
 
-        <!-- Tab 2: Upload Files -->
         <div id="tabUpload" style="display: none;">
             <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-                محتوای فایل سرتیفیکت (.crt / .pem) و کلید خصوصی (.key) را وارد کنید تا روی روتر آپلود و Import شود.
+                محتوای فایل گواهی (.crt) و کلید خصوصی (.key) را وارد کنید تا مستقیماً روی روتر ذخیره و فعال شود.
             </p>
             <form onsubmit="submitUploadCert(event)">
                 <div class="form-group">
-                    <label>نام سرتیفیکت در روتر</label>
+                    <label>نام سرتیفیکت</label>
                     <input type="text" id="up_cert_name" value="server-template" required>
                 </div>
                 <div class="form-group">
-                    <label>محتوای سرتیفیکت (-----BEGIN CERTIFICATE----- ...)</label>
-                    <textarea id="up_cert_content" style="width: 100%; height: 90px; background: #0f1422; color: #fff; border: 1px solid var(--border-color); border-radius: 8px; font-family: monospace; font-size: 0.8rem; padding: 8px;" placeholder="-----BEGIN CERTIFICATE-----
-...
------END CERTIFICATE-----" required></textarea>
+                    <label>محتوای CRT / PEM</label>
+                    <textarea id="up_cert_content" style="height: 70px; font-family: var(--font-mono); font-size: 0.8rem;" placeholder="-----BEGIN CERTIFICATE-----..."></textarea>
                 </div>
                 <div class="form-group">
-                    <label>محتوای کلید خصوصی (-----BEGIN PRIVATE KEY----- ...)</label>
-                    <textarea id="up_key_content" style="width: 100%; height: 90px; background: #0f1422; color: #fff; border: 1px solid var(--border-color); border-radius: 8px; font-family: monospace; font-size: 0.8rem; padding: 8px;" placeholder="-----BEGIN RSA PRIVATE KEY-----
-...
------END RSA PRIVATE KEY-----" required></textarea>
+                    <label>محتوای کلید خصوصی KEY</label>
+                    <textarea id="up_key_content" style="height: 70px; font-family: var(--font-mono); font-size: 0.8rem;" placeholder="-----BEGIN PRIVATE KEY-----..."></textarea>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('certModal')">بستن</button>
-                    <button type="submit" class="btn btn-primary">آپلود و ایمپورت در میکروتیک</button>
+                    <button type="submit" class="btn btn-primary">آپلود و فعال‌سازی</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Modal: Result / Generated Code -->
+<!-- ========================================== -->
+<!-- MODAL: RESULT / GENERATED CLI LOGS         -->
+<!-- ========================================== -->
 <div id="resultModal" class="modal">
     <div class="modal-content" style="max-width: 750px;">
-        <h3 id="resultTitle" style="margin-bottom: 0.5rem; color: var(--success);">عملیات با موفقیت انجام شد</h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted);">
-            دستورات زیر به میکروتیک ارسال و پردازش شدند:
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 id="resultTitle" style="font-size: 1.25rem; color: var(--success);">🎉 عملیات با موفقیت انجام شد!</h3>
+            <button type="button" class="btn btn-secondary" style="padding: 2px 8px;" onclick="closeModal('resultModal')">✕</button>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.8rem;">
+            دستورات زیر روی روتر میکروتیک اجرا و تست شدند:
         </p>
-        <div class="code-block" id="resultCode"></div>
-        <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
-            <button class="btn btn-primary" onclick="closeModal('resultModal'); window.location.reload();">تأیید</button>
+        <div class="terminal-window">
+            <div class="terminal-header">
+                <div class="terminal-dots">
+                    <span class="terminal-dot dot-red"></span>
+                    <span class="terminal-dot dot-yellow"></span>
+                    <span class="terminal-dot dot-green"></span>
+                </div>
+                <span style="font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-mono);">RouterOS CLI Terminal</span>
+            </div>
+            <pre class="wiz-console" id="resultCode" style="max-height: 280px;"></pre>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.2rem;">
+            <button class="btn btn-secondary" onclick="navigator.clipboard.writeText(document.getElementById('resultCode').innerText); alert('دستورات کپی شدند!')">📋 کپی دستورات</button>
+            <button class="btn btn-primary" onclick="closeModal('resultModal'); window.location.reload();">بستن و رفرش</button>
         </div>
     </div>
 </div>
 
-<!-- Modal: Tunnels List -->
+<!-- ========================================== -->
+<!-- MODAL: VIEW TUNNELS                        -->
+<!-- ========================================== -->
 <div id="tunnelsModal" class="modal">
     <div class="modal-content" style="max-width: 650px;">
-        <h3 id="tunServerTitle" style="margin-bottom: 1rem;">تونل‌های سرور</h3>
-        <div id="tunListContent" style="font-size: 0.9rem;"></div>
-        <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;">
+            <h3 id="tunServerTitle" style="font-size: 1.25rem;">🌐 تونل‌های فعال روتر</h3>
+            <button type="button" class="btn btn-secondary" style="padding: 2px 8px;" onclick="closeModal('tunnelsModal')">✕</button>
+        </div>
+        <div id="tunListContent"></div>
+        <div style="display: flex; justify-content: flex-end; margin-top: 1.2rem;">
             <button class="btn btn-secondary" onclick="closeModal('tunnelsModal')">بستن</button>
         </div>
     </div>
 </div>
 
-<script src="/static/js/app.js"></script>
-
-<!-- Modal: Step-by-Step Server Setup Wizard -->
-<!-- Modal: Step-by-Step Interactive Setup Wizard -->
+<!-- ================================================================= -->
+<!-- MODAL: RE-IMAGINED SMART WIZARD (USER-FRIENDLY & PROFESSIONAL)   -->
+<!-- ================================================================= -->
 <div id="wizardModal" class="modal">
-    <div class="modal-content" style="max-width: 860px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+    <div class="modal-content" style="max-width: 880px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1rem;">
             <div>
-                <h2 style="font-size: 1.4rem; color: var(--accent); margin-bottom: 4px;">🚀 ویزارد راه‌اندازی و همگام‌سازی روتر میکروتیک</h2>
-                <p style="font-size: 0.85rem; color: var(--text-muted);">
-                    پیکربندی هوشمند و گام‌به‌گام (GRE، L2TP Ethernet، سرتیفیکت، رادیوس، IKEv2، منگل !IRAN و Killswitch)
+                <h2 style="font-size: 1.35rem; color: #fff; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+                    <span>🚀 ویزارد راه‌اندازی و کانفیگ خودکار روتر میکروتیک</span>
+                </h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+                    پیکربندی هوشمند تونل‌های خروجی، روتینگ، Killswitch، سرورهای OpenVPN، سرتیفیکت و فایروال
                 </p>
             </div>
             <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 1.1rem;" onclick="closeModal('wizardModal')">✕</button>
         </div>
 
-        <!-- SCREEN 0: SCENARIO PICKER -->
+        <!-- SCREEN 0: SCENARIO SELECTOR -->
         <div id="wizardScenarioPicker">
-            <h4 style="margin-bottom: 1.2rem; color: var(--text-primary); font-size: 1rem;">لطفاً نوع سناریوی راه‌اندازی را انتخاب کنید:</h4>
+            <h4 style="margin-bottom: 1.2rem; color: #fff; font-size: 1rem;">نوع نیاز خود را برای این روتر انتخاب کنید:</h4>
             
             <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 1.5rem;">
-                <!-- Scenario 1: Clean Setup -->
+                <!-- Scenario 1 -->
                 <div class="scenario-card full" onclick="selectWizardScenario('full')">
                     <div style="font-size: 2.2rem; line-height: 1;">🟢</div>
                     <div style="flex: 1;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <strong style="font-size: 1.05rem; color: var(--accent);">سناریوی ۱: راه‌اندازی کامل روتر خام (Full Clean Setup)</strong>
-                            <span class="tag-pill" style="color: var(--accent); border-color: var(--accent);">۵ گام کامل</span>
+                            <strong style="font-size: 1.05rem; color: var(--primary);">۱. راه‌اندازی صفر تا صد روتر جدید (Fresh Setup)</strong>
+                            <span class="tag-pill" style="color: var(--primary); border-color: var(--primary);">پیشنهادی برای سرور خام</span>
                         </div>
                         <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px; line-height: 1.6;">
-                            روتر تازه تحویل گرفته شده و هنوز هیچ تونلی ندارد. ویزارد صفر تا صد تمام تنظیمات اتصال، تولید سرتیفیکت، RADIUS مرکزی، IKEv2 EAP، اسکریپت روزانه ایران و ساخت تونل‌های خروجی (GRE یا L2TP Ethernet) را انجام می‌دهد.
+                            روتر تازه خریداری شده و هیچ تنظیمی ندارد. ویزارد تمام موارد شامل اتصال، ساخت سرتیفیکت، رادیوس، زمان‌بندی روزانه ایران، و ساخت تونل‌های خروجی با پورت و پروتکل دلخواه را قدم به قدم می‌سازد.
                         </p>
                     </div>
                 </div>
 
-                <!-- Scenario 2: Adopt Existing Tunnels -->
+                <!-- Scenario 2 -->
                 <div class="scenario-card adopt" onclick="selectWizardScenario('adopt')">
                     <div style="font-size: 2.2rem; line-height: 1;">🔵</div>
                     <div style="flex: 1;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <strong style="font-size: 1.05rem; color: var(--success);">سناریوی ۲: همگام‌سازی تونل‌های موجود روتر (Adopt Existing Tunnels)</strong>
-                            <span class="tag-pill" style="color: var(--success); border-color: var(--success);">پیشنهادی برای سرورهای آماده</span>
+                            <strong style="font-size: 1.05rem; color: var(--success);">۲. همگام‌سازی تونل‌های از قبل ساخته‌شده (Adopt Existing Tunnels)</strong>
+                            <span class="tag-pill" style="color: var(--success); border-color: var(--success);">فوق‌العاده سریع</span>
                         </div>
                         <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px; line-height: 1.6;">
-                            اپراتور قبلاً اینترفیس‌های تونل (GRE یا L2TP-Ether) را روی میکروتیک ایجاد کرده است. سیستم به صورت خودکار تونل‌ها را اسکن کرده و بقیه مسیر (Routing Tables، Killswitch، OpenVPN Server و Mangle !IRAN) را با یک کلیک می‌سازد.
+                            اپراتور قبلاً اینترفیس‌های تونل (GRE یا L2TP-Ether) را روی میکروتیک ایجاد کرده است. سیستم تونل‌ها را کشف کرده و بقیه مسیر (Routing Tables، Killswitch، OpenVPN Server و Mangle !IRAN) را در ۱ ثانیه خودکار می‌سازد.
                         </p>
                     </div>
                 </div>
 
-                <!-- Scenario 3: Services Only -->
+                <!-- Scenario 3 -->
                 <div class="scenario-card services" onclick="selectWizardScenario('services_only')">
                     <div style="font-size: 2.2rem; line-height: 1;">🟣</div>
                     <div style="flex: 1;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <strong style="font-size: 1.05rem; color: var(--warning);">سناریوی ۳: فقط سرتیفیکت، رادیوس و فایروال (Services & Security Only)</strong>
-                            <span class="tag-pill" style="color: var(--warning); border-color: var(--warning);">بدون دستکاری تونل‌ها</span>
+                            <strong style="font-size: 1.05rem; color: var(--warning);">۳. فقط سرتیفیکت، رادیوس و فایروال (Services Only)</strong>
+                            <span class="tag-pill" style="color: var(--warning); border-color: var(--warning);">بدون تغییر تونل‌ها</span>
                         </div>
                         <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px; line-height: 1.6;">
-                            روتر در حال کار است و نیازی به تعریف تونل جدید ندارد. فقط می‌خواهید سرتیفیکت معتبر بسازید یا آپلود کنید، اتصال RADIUS و IKEv2 را ست کنید و اسکریپت ۴ مرحله‌ای دانلود روزانه IPDeny ایران را فعال کنید.
+                            روتر در حال کار است و نیازی به تعریف تونل جدید ندارد. فقط می‌خواهید سرتیفیکت معتبر بسازید، اتصال RADIUS را تنظیم کنید و اسکریپت روزانه IPDeny ایران را فعال کنید.
                         </p>
                     </div>
                 </div>
@@ -402,14 +410,15 @@
             </div>
         </div>
 
-        <!-- SCREEN 1: SCENARIO STEPS WORKFLOW -->
+        <!-- SCREEN 1: WIZARD WORKFLOW -->
         <div id="wizardScenarioSteps" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border-color);">
-                <button type="button" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.85rem;" onclick="resetWizardToScenarios()">⬅ تغییر سناریو</button>
-                <div id="activeScenarioBadge" class="tag-pill" style="font-weight: 600;"></div>
+            <!-- Top Controls -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.4rem;">
+                <button type="button" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.85rem;" onclick="resetWizardToScenarios()">⬅ تغییر حالت و سناریو</button>
+                <div id="activeScenarioBadge" class="tag-pill" style="font-weight: 700; font-size: 0.82rem;"></div>
             </div>
 
-            <!-- Stepper Indicators -->
+            <!-- Stepper Progress Bar -->
             <div class="wizard-stepper" id="wizardStepperNav">
                 <div class="step-indicator active" id="stepInd1" onclick="goToWizardStep(1)">
                     <div class="step-circle">۱</div>
@@ -417,7 +426,7 @@
                 </div>
                 <div class="step-indicator" id="stepInd2" onclick="goToWizardStep(2)">
                     <div class="step-circle">۲</div>
-                    <div class="step-title" id="stepTitle2">سرتیفیکت</div>
+                    <div class="step-title" id="stepTitle2">امنیت و سرتیفیکت</div>
                 </div>
                 <div class="step-indicator" id="stepInd3" onclick="goToWizardStep(3)">
                     <div class="step-circle">۳</div>
@@ -425,7 +434,7 @@
                 </div>
                 <div class="step-indicator" id="stepInd4" onclick="goToWizardStep(4)">
                     <div class="step-circle">۴</div>
-                    <div class="step-title" id="stepTitle4">تونل‌های خروجی</div>
+                    <div class="step-title" id="stepTitle4">کشورها و پورت‌ها</div>
                 </div>
                 <div class="step-indicator" id="stepInd5" onclick="goToWizardStep(5)">
                     <div class="step-circle">۵</div>
@@ -433,24 +442,29 @@
                 </div>
             </div>
 
-            <!-- STEP 1: ROUTER CONNECTION & SCAN -->
+            <!-- ============================================== -->
+            <!-- STEP 1: ROUTER CONNECTION                      -->
+            <!-- ============================================== -->
             <div class="wizard-step-content active" id="wizardStep1">
-                <h4 style="margin-bottom: 0.8rem; color: var(--accent);">گام ۱: مشخصات و برقراری ارتباط با روتر میکروتیک</h4>
-                
-                <div class="form-group" style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); padding: 12px; border-radius: 8px;">
-                    <label style="color: var(--accent); font-weight: 600;">انتخاب سریع از سرورهای موجود در پنل:</label>
-                    <select id="wiz_fleet_select" onchange="onFleetServerSelect()" style="border: 1px solid var(--accent); background: #0f1422; color: #fff; padding: 8px; border-radius: 6px; width: 100%;">
-                        <option value="">+ افزودن و کانفیگ سرور جدید (دستی)</option>
+                <h4 style="margin-bottom: 0.5rem; color: #fff; font-size: 1.1rem;">گام ۱: روتر مورد نظرتان را انتخاب یا متصل کنید</h4>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                    می‌توانید یکی از روترهای ذخیره‌شده را انتخاب کنید یا مشخصات یک روتر جدید را وارد نمایید:
+                </p>
+
+                <div class="form-group" style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.25); padding: 14px; border-radius: var(--radius-md);">
+                    <label style="color: var(--primary); font-weight: 700; margin-bottom: 6px;">انتخاب از روترهای ناوگان:</label>
+                    <select id="wiz_fleet_select" onchange="onFleetServerSelect()" style="font-weight: 600;">
+                        <option value="">+ افزودن روتر جدید به صورت دستی</option>
                     </select>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
                     <div class="form-group">
-                        <label>نام سرور (Identity)</label>
+                        <label>نام روتر (Identity)</label>
                         <input type="text" id="wiz_name" value="CHR-Production-New" required>
                     </div>
                     <div class="form-group">
-                        <label>آدرس IP سرور</label>
+                        <label>آدرس IP روتر</label>
                         <input type="text" id="wiz_host" value="95.216.100.50" required>
                     </div>
                     <div class="form-group">
@@ -458,7 +472,7 @@
                         <input type="number" id="wiz_api_port" value="8728" required>
                     </div>
                     <div class="form-group">
-                        <label>پورت امن Winbox</label>
+                        <label>پورت Winbox</label>
                         <input type="number" id="wiz_winbox_port" value="2020" required>
                     </div>
                     <div class="form-group">
@@ -471,33 +485,50 @@
                     </div>
                 </div>
 
-                <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
                     <button type="button" class="btn btn-primary" id="btnExecStep1" onclick="executeStep1WithScan()">🔌 تست اتصال و شناسایی روتر</button>
                     <button type="button" class="btn btn-secondary wiz-next-btn" id="btnNextStep1" disabled style="opacity: 0.5;" onclick="proceedFromStep1()">مرحله بعد ➡</button>
                 </div>
 
-                <div class="wiz-console" id="consoleStep1" style="display: none;"></div>
-                <div id="wiz_detected_alert" style="display: none; margin-top: 10px; padding: 10px; border-radius: 8px; font-size: 0.85rem;"></div>
-            </div>
-
-            <!-- STEP 2: CERTIFICATE (Self-Signed / Upload / Existing) -->
-            <div class="wizard-step-content" id="wizardStep2">
-                <h4 style="margin-bottom: 0.8rem; color: var(--accent);">گام ۲: تنظیمات و ایجاد گواهی امنیتی (Certificate)</h4>
-                
-                <div id="wiz_found_cert_notice" style="display: none; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 10px; border-radius: 8px; margin-bottom: 1rem; color: var(--success); font-size: 0.85rem;">
-                    ✅ سرتیفیکت‌های معتبر روی روتر شناسایی شدند! می‌توانید از آن‌ها استفاده کنید یا سرتیفیکت جدید بسازید.
+                <!-- Console Box -->
+                <div class="terminal-window" id="consoleStep1Window" style="display: none;">
+                    <div class="terminal-header">
+                        <div class="terminal-dots">
+                            <span class="terminal-dot dot-red"></span>
+                            <span class="terminal-dot dot-yellow"></span>
+                            <span class="terminal-dot dot-green"></span>
+                        </div>
+                        <span style="font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-mono);">اتصال زنده RouterOS API</span>
+                    </div>
+                    <pre class="wiz-console" id="consoleStep1"></pre>
                 </div>
 
-                <div class="form-group" style="background: #0f1422; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fff; margin-bottom: 8px;">
+                <div id="wiz_detected_alert" style="display: none; margin-top: 12px; padding: 12px; border-radius: var(--radius-md); font-size: 0.88rem;"></div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- STEP 2: CERTIFICATE                            -->
+            <!-- ============================================== -->
+            <div class="wizard-step-content" id="wizardStep2">
+                <h4 style="margin-bottom: 0.5rem; color: #fff; font-size: 1.1rem;">گام ۲: گواهی امنیتی (SSL/TLS Certificate)</h4>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                    برای سرویس‌های OpenVPN و IKEv2 یک سرتیفیکت معتبر نیاز است:
+                </p>
+
+                <div id="wiz_found_cert_notice" style="display: none; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 12px; border-radius: var(--radius-md); margin-bottom: 1rem; color: var(--success); font-size: 0.88rem;">
+                    ✅ سرتیفیکت‌های آماده روی این روتر شناسایی شدند! می‌توانید مستقیماً از آن‌ها استفاده کنید.
+                </div>
+
+                <div class="form-group" style="background: rgba(30, 41, 59, 0.6); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #fff; margin-bottom: 10px;">
+                        <input type="radio" name="wiz_cert_mode" id="rad_cert_self_signed" value="self_signed" checked onchange="toggleCertModeFields()">
+                        <strong>ساخت و امضای خودکار روی خود روتر (Self-Signed CA + Server Cert) — پیشنهادی</strong>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #fff; margin-bottom: 10px;">
                         <input type="radio" name="wiz_cert_mode" id="rad_cert_existing" value="existing" onchange="toggleCertModeFields()">
                         <strong>استفاده از سرتیفیکت موجود در روتر (بدون ساخت مجدد)</strong>
                     </label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fff; margin-bottom: 8px;">
-                        <input type="radio" name="wiz_cert_mode" id="rad_cert_self_signed" value="self_signed" checked onchange="toggleCertModeFields()">
-                        <strong>ساخت و امضای خودکار روی خود روتر (Self-Signed CA + Server Cert)</strong>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fff;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #fff;">
                         <input type="radio" name="wiz_cert_mode" id="rad_cert_upload" value="upload" onchange="toggleCertModeFields()">
                         <strong>آپلود فایل‌های گواهی اختصاصی (.crt / .key)</strong>
                     </label>
@@ -505,8 +536,8 @@
 
                 <!-- Existing cert dropdown -->
                 <div id="wiz_existing_cert_box" style="display: none;" class="form-group">
-                    <label>انتخاب سرتیفیکت کشف‌شده در میکروتیک:</label>
-                    <select id="wiz_existing_cert_select" style="border: 1px solid var(--accent); width: 100%; background: #0f1422; color: #fff; padding: 8px; border-radius: 6px;"></select>
+                    <label>انتخاب سرتیفیکت موجود در روتر:</label>
+                    <select id="wiz_existing_cert_select" style="border: 1px solid var(--primary);"></select>
                 </div>
 
                 <div class="form-group" id="wiz_cert_name_box">
@@ -517,203 +548,179 @@
                 <div id="wiz_upload_box" style="display: none;">
                     <div class="form-group">
                         <label>محتوای فایل CRT / PEM</label>
-                        <textarea id="wiz_cert_content" placeholder="-----BEGIN CERTIFICATE-----..." style="width: 100%; height: 75px; background: #0f1422; color: #fff; border: 1px solid var(--border-color); border-radius: 8px; font-family: monospace; font-size: 0.8rem; padding: 8px;"></textarea>
+                        <textarea id="wiz_cert_content" placeholder="-----BEGIN CERTIFICATE-----..."></textarea>
                     </div>
                     <div class="form-group">
-                        <label>محتوای کلید خصوصی KEY</label>
-                        <textarea id="wiz_key_content" placeholder="-----BEGIN PRIVATE KEY-----..." style="width: 100%; height: 75px; background: #0f1422; color: #fff; border: 1px solid var(--border-color); border-radius: 8px; font-family: monospace; font-size: 0.8rem; padding: 8px;"></textarea>
+                        <label>محتوای فایل KEY</label>
+                        <textarea id="wiz_key_content" placeholder="-----BEGIN PRIVATE KEY-----..."></textarea>
                     </div>
                 </div>
 
-                <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
                     <button type="button" class="btn btn-secondary" onclick="goToWizardStep(1)">⬅ مرحله قبل</button>
                     <div style="display: flex; gap: 10px;">
-                        <button type="button" class="btn btn-primary" id="btnExecStep2" onclick="executeStep2Cert()">📜 ثبت و ایجاد سرتیفیکت</button>
+                        <button type="button" class="btn btn-primary" id="btnExecStep2" onclick="executeStep2Cert()">📜 ساخت و ثبت سرتیفیکت</button>
                         <button type="button" class="btn btn-secondary wiz-next-btn" id="btnNextStep2" disabled style="opacity: 0.5;" onclick="goToWizardStep(3)">مرحله بعد ➡</button>
                     </div>
                 </div>
 
-                <div class="wiz-console" id="consoleStep2" style="display: none;"></div>
+                <div class="terminal-window" id="consoleStep2Window" style="display: none;">
+                    <div class="terminal-header">
+                        <div class="terminal-dots">
+                            <span class="terminal-dot dot-red"></span>
+                            <span class="terminal-dot dot-yellow"></span>
+                            <span class="terminal-dot dot-green"></span>
+                        </div>
+                        <span style="font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-mono);">خروجی ساخت Certificate</span>
+                    </div>
+                    <pre class="wiz-console" id="consoleStep2"></pre>
+                </div>
             </div>
 
-            <!-- STEP 3: RADIUS, IKEV2 & IRAN SCRIPT -->
+            <!-- ============================================== -->
+            <!-- STEP 3: RADIUS, IKEV2 & IRAN FETCH            -->
+            <!-- ============================================== -->
             <div class="wizard-step-content" id="wizardStep3">
-                <h4 style="margin-bottom: 0.8rem; color: var(--accent);">گام ۳: تنظیمات RADIUS مرکزی، IKEv2 EAP و فایروال</h4>
-                
+                <h4 style="margin-bottom: 0.5rem; color: #fff; font-size: 1.1rem;">گام ۳: احراز هویت متمرکز، IKEv2 و فایروال</h4>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                    اتصال اکانتینگ RADIUS، راه‌اندازی پروتکل سریع IKEv2 EAP و اسکریپت روزانه ایران:
+                </p>
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div class="form-group">
-                        <label>IP سرور RADIUS</label>
+                        <label>آدرس سرور RADIUS</label>
                         <input type="text" id="wiz_radius_ip" value="91.199.27.107" required>
                     </div>
                     <div class="form-group">
-                        <label>Secret سرور RADIUS</label>
+                        <label>رمز سرور RADIUS (Secret)</label>
                         <input type="text" id="wiz_radius_secret" value="radius_secret_123" required>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>استخر آی‌پی کاربران IKEv2</label>
+                    <label>استخر آی‌پی کلاینت‌های IKEv2</label>
                     <input type="text" id="wiz_ikev2_pool" value="10.0.0.2-10.0.0.254" required>
                 </div>
 
-                <div class="form-group" style="background: #0f1422; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
-                    <label style="display: flex; align-items: center; gap: 8px; color: #fff; cursor: pointer;">
-                        <input type="checkbox" id="wiz_iran_check" checked>
-                        <span>🇮🇷 نصب اسکریپت خودکار IPDeny ایران (دانلود لیست، پاکسازی قبلی و Scheduler روزانه ۴ صبح)</span>
+                <div class="form-group" style="background: rgba(30, 41, 59, 0.6); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                    <label style="display: flex; align-items: center; gap: 10px; color: #fff; cursor: pointer;">
+                        <input type="checkbox" id="wiz_iran_check" checked style="width: 20px; height: 20px;">
+                        <span>🇮🇷 <strong>نصب اسکریپت خودکار IPDeny ایران</strong> (دانلود خودکار لیست آی‌پی‌ها و زمان‌بندی روزانه ۴:۰۰ صبح)</span>
                     </label>
                 </div>
 
-                <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
                     <button type="button" class="btn btn-secondary" onclick="goToWizardStep(2)">⬅ مرحله قبل</button>
                     <div style="display: flex; gap: 10px;">
-                        <button type="button" class="btn btn-primary" id="btnExecStep3" onclick="executeStep3Services()">🛡️ اعمال تنظیمات مرکزی و فایروال</button>
+                        <button type="button" class="btn btn-primary" id="btnExecStep3" onclick="executeStep3Services()">🛡️ اعمال تنظیمات RADIUS و فایروال</button>
                         <button type="button" class="btn btn-secondary wiz-next-btn" id="btnNextStep3" disabled style="opacity: 0.5;" onclick="onFinishStep3()">مرحله بعد ➡</button>
                     </div>
                 </div>
 
-                <div class="wiz-console" id="consoleStep3" style="display: none;"></div>
+                <div class="terminal-window" id="consoleStep3Window" style="display: none;">
+                    <div class="terminal-header">
+                        <div class="terminal-dots">
+                            <span class="terminal-dot dot-red"></span>
+                            <span class="terminal-dot dot-yellow"></span>
+                            <span class="terminal-dot dot-green"></span>
+                        </div>
+                        <span style="font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-mono);">خروجی دستورات سرویس‌ها</span>
+                    </div>
+                    <pre class="wiz-console" id="consoleStep3"></pre>
+                </div>
             </div>
 
-            <!-- STEP 4: OUTBOUND TUNNELS (CUSTOMIZABLE COUNTRIES, PORTS & PROTOCOLS) -->
+            <!-- ============================================== -->
+            <!-- STEP 4: COUNTRIES, PORTS & PROTOCOLS (CLEAN UI) -->
+            <!-- ============================================== -->
             <div class="wizard-step-content" id="wizardStep4">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <div>
-                        <h4 style="color: var(--accent); margin-bottom: 4px;">گام ۴: انتخاب و سفارشی‌سازی تونل‌ها (کشور، پورت و پروتکل)</h4>
+                        <h4 style="color: #fff; font-size: 1.15rem; font-weight: 700; margin-bottom: 4px;">گام ۴: انتخاب کشورها، پورت‌ها و پروتکل‌ها</h4>
                         <p style="font-size: 0.85rem; color: var(--text-muted);">
-                            کشورهایی که می‌خواهید فعال شوند را تیک بزنید؛ می‌توانید <strong>پورت</strong>، <strong>پروتکل (UDP یا TCP)</strong> و نوع تونل هر کشور را مستقیماً تغییر دهید:
+                            کشورهای مورد نظرتان را تیک بزنید. می‌توانید <strong>شماره پورت</strong> و <strong>پروتکل (UDP یا TCP)</strong> را آزادانه تغییر دهید:
                         </p>
                     </div>
-                    <button type="button" class="btn btn-secondary" style="font-size: 0.85rem; padding: 6px 12px; border-color: var(--accent); color: var(--accent);" onclick="addCustomCountryRow()">➕ افزودن کشور دلخواه</button>
-                </div>
-
-                <!-- Column Headers -->
-                <div class="country-custom-header">
-                    <div>فعال</div>
-                    <div>کشور (کد)</div>
-                    <div>پورت OVPN</div>
-                    <div>پروتکل</div>
-                    <div>نوع تونل</div>
-                    <div>IP سرور خارج</div>
-                    <div>حذف</div>
-                </div>
-
-                <!-- Customizable Country Rows Container -->
-                <div class="country-custom-list" id="countryCustomList">
-                    <!-- Populated dynamically by JS -->
-                </div>
-
-                <!-- Action Button for Batch Creation of Checked Countries -->
-                <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                    <div style="font-size: 0.85rem; color: var(--text-muted);">
-                        با کلیک روی دکمه روبرو، روتینگ، Killswitch، OpenVPN Server و Mangle تمام کشورهای تیک‌خورده ساخته می‌شود:
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn btn-secondary" style="font-size: 0.82rem; padding: 6px 12px;" onclick="toggleAllCountries(true)">تیک زدن همه</button>
+                        <button type="button" class="btn btn-secondary" style="font-size: 0.82rem; padding: 6px 12px;" onclick="addCustomCountryRow()">➕ افزودن کشور دلخواه</button>
                     </div>
-                    <button type="button" class="btn btn-primary" id="btnExecBatchCountries" onclick="executeBatchCustomCountries()">⚡ ساخت و فعال‌سازی تمام کشورهای تیک‌خورده</button>
                 </div>
 
-                <!-- Optional Single Advanced Form Toggle -->
-                <details style="background: #0f1422; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; margin-bottom: 1rem;">
-                    <summary style="cursor: pointer; font-size: 0.85rem; color: var(--accent); font-weight: 600;">
-                        ⚙️ تعریف دستی یک تونل پیشرفته اختصاصی (L2TPv3 IDs، رنج‌های خاص /30)
-                    </summary>
-                    <div style="margin-top: 12px;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
-                            <div class="form-group">
-                                <label>کد کشور</label>
-                                <input type="text" id="wiz_tun_name" value="custom">
-                            </div>
-                            <div class="form-group">
-                                <label>نام نمایشی</label>
-                                <input type="text" id="wiz_tun_label" value="Custom Server">
-                            </div>
-                            <div class="form-group">
-                                <label>پورت OVPN</label>
-                                <input type="number" id="wiz_tun_ovpn_port" value="443">
-                            </div>
-                            <div class="form-group">
-                                <label>پروتکل OVPN</label>
-                                <select id="wiz_tun_ovpn_proto" style="background: #161e31; color: #fff; border: 1px solid var(--accent); padding: 8px; border-radius: 6px; width: 100%;">
-                                    <option value="udp">UDP</option>
-                                    <option value="tcp">TCP</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 8px;">
-                            <div class="form-group">
-                                <label>نوع تونل</label>
-                                <select id="wiz_tun_type" onchange="toggleTunnelTypeFields()" style="background: #161e31; color: #fff; border: 1px solid var(--accent); padding: 8px; border-radius: 6px; width: 100%;">
-                                    <option value="gre">GRE Tunnel</option>
-                                    <option value="l2tp_ether">L2TP Ethernet (Pseudowire)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>IP سرور خارج</label>
-                                <input type="text" id="wiz_tun_remote" value="1.2.3.4">
-                            </div>
-                            <div class="form-group">
-                                <label>IP لوکال تونل (/30)</label>
-                                <input type="text" id="wiz_tun_local_ip" value="50.50.50.2/30">
-                            </div>
-                            <div class="form-group">
-                                <label>IP گیت‌وی تونل</label>
-                                <input type="text" id="wiz_tun_remote_gw" value="50.50.50.1">
-                            </div>
-                        </div>
-                        <!-- L2TPv3 specific fields -->
-                        <div id="wiz_l2tp_specific_fields" style="display: none; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 10px; background: rgba(56, 189, 248, 0.05); padding: 10px; border-radius: 6px;">
-                            <div class="form-group"><label>Local Tunnel ID</label><input type="number" id="wiz_l2tp_ltid" value="33"></div>
-                            <div class="form-group"><label>Remote Tunnel ID</label><input type="number" id="wiz_l2tp_rtid" value="22"></div>
-                            <div class="form-group"><label>Local Session ID</label><input type="number" id="wiz_l2tp_lsid" value="333"></div>
-                            <div class="form-group"><label>Remote Session ID</label><input type="number" id="wiz_l2tp_rsid" value="222"></div>
-                        </div>
-                        <div style="margin-top: 10px; display: flex; justify-content: flex-end;">
-                            <button type="button" class="btn btn-secondary" onclick="executeStep4AddTunnel()">⚡ ساخت این تونل اختصاصی</button>
-                        </div>
-                    </div>
-                </details>
+                <!-- Modern Interactive Country Cards Grid -->
+                <div class="country-cards-grid" id="countryCustomList">
+                    <!-- Populated dynamically with beautiful country cards -->
+                </div>
 
-                <div class="wiz-console" id="consoleStep4" style="display: none;"></div>
+                <!-- Big Primary Action Button -->
+                <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); padding: 14px 18px; border-radius: var(--radius-md); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <strong style="color: #fff; font-size: 0.95rem;">آماده ساخت مسیرهای روتینگ و OpenVPN:</strong>
+                        <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
+                            سیستم جدول‌های روتینگ، روت دیفالت به تونل، Killswitch، استخرها و رول‌های Mangle را خودکار ایجاد می‌کند.
+                        </p>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="btnExecBatchCountries" style="font-size: 0.95rem; padding: 0.75rem 1.6rem;" onclick="executeBatchCustomCountries()">⚡ ساخت و فعال‌سازی تمام کشورهای تیک‌خورده</button>
+                </div>
+
+                <div class="terminal-window" id="consoleStep4Window" style="display: none;">
+                    <div class="terminal-header">
+                        <div class="terminal-dots">
+                            <span class="terminal-dot dot-red"></span>
+                            <span class="terminal-dot dot-yellow"></span>
+                            <span class="terminal-dot dot-green"></span>
+                        </div>
+                        <span style="font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-mono);">خروجی ساخت تونل‌ها و OpenVPN</span>
+                    </div>
+                    <pre class="wiz-console" id="consoleStep4"></pre>
+                </div>
+
                 <div id="wiz_added_tunnels_box" style="margin-top: 10px;"></div>
 
-                <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
                     <button type="button" class="btn btn-secondary" onclick="goToWizardStep(3)">⬅ مرحله قبل</button>
-                    <button type="button" class="btn btn-secondary wiz-next-btn" id="btnNextStep4" disabled style="opacity: 0.5;" onclick="goToWizardStep(5)">اتمام و مشاهده گزارش ➡</button>
+                    <button type="button" class="btn btn-secondary wiz-next-btn" id="btnNextStep4" disabled style="opacity: 0.5;" onclick="goToWizardStep(5)">مشاهده گزارش نهایی و پایان ➡</button>
                 </div>
             </div>
 
-            <!-- STEP ADOPT: ADOPT EXISTING TUNNELS (Scenario 2) -->
+            <!-- ============================================== -->
+            <!-- STEP ADOPT: ADOPT EXISTING TUNNELS             -->
+            <!-- ============================================== -->
             <div class="wizard-step-content" id="wizardStepAdopt">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <div>
-                        <h4 style="color: var(--success); margin-bottom: 4px;">🔵 تونل‌های کشف‌شده روی این روتر (Adopt Existing Tunnels)</h4>
+                        <h4 style="color: var(--success); font-size: 1.15rem; font-weight: 700; margin-bottom: 4px;">🔵 اینترفیس‌های کشف‌شده روی این روتر</h4>
                         <p style="font-size: 0.85rem; color: var(--text-muted);">
-                            اپراتور این تونل‌ها را قبلاً ساخته است. سیستم بقیه مسیر (Routing، Killswitch، OpenVPN و Mangle !IRAN) را خودکار ایجاد می‌کند.
+                            اپراتور این تونل‌ها را زده است. پورت و پروتکل دلخواه را مشخص کنید و دکمه را بزنید تا بقیه مسیر خودکار ست شود:
                         </p>
                     </div>
-                    <button type="button" class="btn btn-primary" id="btnAdoptAll" style="background: var(--success); color: #000; font-weight: 700;" onclick="adoptAllDetectedTunnels()">🚀 همگام‌سازی همه تونل‌ها با ۱ کلیک</button>
+                    <button type="button" class="btn btn-success" id="btnAdoptAll" style="font-size: 0.95rem; padding: 0.65rem 1.4rem;" onclick="adoptAllDetectedTunnels()">🚀 ساخت روتینگ و OpenVPN برای همه تونل‌ها</button>
                 </div>
 
-                <div id="wizAdoptTunnelsContainer" style="max-height: 380px; overflow-y: auto; padding-right: 4px;"></div>
+                <div id="wizAdoptTunnelsContainer" style="max-height: 400px; overflow-y: auto;"></div>
 
-                <div style="margin-top: 1.2rem; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 10px;">
+                <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
                     <button type="button" class="btn btn-secondary" onclick="goToWizardStep(1)">⬅ مرحله قبل</button>
-                    <button type="button" class="btn btn-primary" id="btnNextAdopt" onclick="goToWizardStep(5)">اتمام و مشاهده گزارش ➡</button>
+                    <button type="button" class="btn btn-primary" id="btnNextAdopt" onclick="goToWizardStep(5)">مشاهده گزارش نهایی ➡</button>
                 </div>
             </div>
 
-            <!-- STEP 5: FINISH & SUMMARY -->
+            <!-- ============================================== -->
+            <!-- STEP 5: FINISH & SUMMARY                       -->
+            <!-- ============================================== -->
             <div class="wizard-step-content" id="wizardStep5">
-                <div style="text-align: center; padding: 1.5rem 0;">
+                <div style="text-align: center; padding: 2rem 0;">
                     <div style="font-size: 3.5rem; margin-bottom: 0.5rem;">🎉</div>
-                    <h3 style="color: var(--success); font-size: 1.5rem; margin-bottom: 0.5rem;">عملیات با موفقیت انجام شد!</h3>
-                    <p style="font-size: 0.9rem; color: var(--text-muted); max-width: 500px; margin: 0 auto 1.5rem auto;">
-                        کلیه کانفیگ‌های لازم شامل Routing Table، روت‌های خروجی، Killswitch با blackhole=yes، سرورهای OpenVPN، پروفایل‌های رمزنگاری و رول‌های Mangle !IRAN روی روتر با موفقیت مستقر شدند.
+                    <h3 style="color: var(--success); font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem;">کانفیگ با موفقیت انجام شد!</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); max-width: 520px; margin: 0 auto 1.5rem auto; line-height: 1.7;">
+                        کلیه روتینگ‌ها، Killswitch (blackhole)، اینترفیس‌های OpenVPN Server، پروفایل‌های PPP و رول‌های فایروال !IRAN به درستی پیکربندی شدند.
                     </p>
                     
-                    <div id="wizardFinalSummaryBox" style="background: #0f1422; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; text-align: right; max-width: 600px; margin: 0 auto 1.5rem auto; font-size: 0.85rem; line-height: 1.8;"></div>
+                    <div id="wizardFinalSummaryBox" style="background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.2rem; text-align: right; max-width: 620px; margin: 0 auto 1.5rem auto; font-size: 0.88rem; line-height: 1.9;"></div>
 
                     <div style="display: flex; justify-content: center; gap: 12px;">
-                        <button type="button" class="btn btn-secondary" onclick="copyAllWizardCommands()">📋 کپی تمام دستورات CLI اجرا شده</button>
-                        <button type="button" class="btn btn-primary" style="background: var(--success); color: #000; font-weight: 700;" onclick="finishWizardAndReload()">✅ اتمام و بازگشت به داشبورد</button>
+                        <button type="button" class="btn btn-secondary" onclick="copyAllWizardCommands()">📋 کپی تمام دستورات CLI روتر</button>
+                        <button type="button" class="btn btn-primary" onclick="finishWizardAndReload()">✅ اتمام و بازگشت به داشبورد</button>
                     </div>
                 </div>
             </div>
@@ -722,6 +729,6 @@
     </div>
 </div>
 
-
+<script src="/static/js/app.js"></script>
 </body>
 </html>
