@@ -56,7 +56,12 @@ async function submitDestination(e) {
         client_gateway_ip: '10.20.1.1',
         client_subnet: '10.20.1.0/24',
         enable_killswitch: true,
-        bypass_iran: true
+        bypass_iran: true,
+        local_ip: document.getElementById('dst_l2tp_local_ip') ? document.getElementById('dst_l2tp_local_ip').value.trim() : null,
+        local_tunnel_id: document.getElementById('dst_local_tunnel_id') ? parseInt(document.getElementById('dst_local_tunnel_id').value) : 33,
+        remote_tunnel_id: document.getElementById('dst_remote_tunnel_id') ? parseInt(document.getElementById('dst_remote_tunnel_id').value) : 22,
+        local_session_id: document.getElementById('dst_local_session_id') ? parseInt(document.getElementById('dst_local_session_id').value) : 333,
+        remote_session_id: document.getElementById('dst_remote_session_id') ? parseInt(document.getElementById('dst_remote_session_id').value) : 222
     };
     
     closeModal('addDestModal');
@@ -229,14 +234,14 @@ let cachedFleetServers = [];
 
 // Beautiful Curated Country Cards with Smart Defaults
 let customizableCountriesList = [
-    { checked: false, code: 'de', flag: '🇩🇪', label: 'آلمان', port: 6066, proto: 'udp', type: 'gre', remote_ip: '', local_30: '40.10.1.2/30', gw_30: '40.10.1.1', pool: '10.18.1.2-10.18.1.200', subnet: '10.18.1.0/24' },
-    { checked: false, code: 'usa', flag: '🇺🇸', label: 'آمریکا', port: 6065, proto: 'udp', type: 'gre', remote_ip: '', local_30: '40.11.1.2/30', gw_30: '40.11.1.1', pool: '10.17.1.2-10.17.1.200', subnet: '10.17.1.0/24' },
-    { checked: false, code: 'eng', flag: '🇬🇧', label: 'انگلیس', port: 6060, proto: 'tcp', type: 'gre', remote_ip: '', local_30: '40.12.1.2/30', gw_30: '40.12.1.1', pool: '10.16.1.2-10.16.1.200', subnet: '10.16.1.0/24' },
-    { checked: false, code: 'nl', flag: '🇳🇱', label: 'هلند', port: 6064, proto: 'udp', type: 'gre', remote_ip: '', local_30: '40.13.1.2/30', gw_30: '40.13.1.1', pool: '10.15.1.2-10.15.1.200', subnet: '10.15.1.0/24' },
-    { checked: false, code: 'fin', flag: '🇫🇮', label: 'فنلاند', port: 6059, proto: 'udp', type: 'gre', remote_ip: '', local_30: '40.14.1.2/30', gw_30: '40.14.1.1', pool: '10.12.1.2-10.12.1.200', subnet: '10.12.1.0/24' },
-    { checked: false, code: 'pol', flag: '🇵🇱', label: 'لهستان', port: 6063, proto: 'udp', type: 'gre', remote_ip: '', local_30: '40.15.1.2/30', gw_30: '40.15.1.1', pool: '10.13.1.2-10.13.1.200', subnet: '10.13.1.0/24' },
-    { checked: false, code: 'ca', flag: '🇨🇦', label: 'کانادا', port: 6067, proto: 'udp', type: 'gre', remote_ip: '', local_30: '40.16.1.2/30', gw_30: '40.16.1.1', pool: '10.19.1.2-10.19.1.200', subnet: '10.19.1.0/24' },
-    { checked: false, code: 'trk', flag: '🇹🇷', label: 'ترکیه', port: 6058, proto: 'udp', type: 'gre', remote_ip: '', local_30: '40.17.1.2/30', gw_30: '40.17.1.1', pool: '10.11.1.2-10.11.1.200', subnet: '10.11.1.0/24' }
+    { checked: false, code: 'de', flag: '🇩🇪', label: 'آلمان', port: 6066, proto: 'udp', type: 'l2tp_ether', remote_ip: '', local_ip: '', local_tunnel_id: 31, remote_tunnel_id: 21, local_session_id: 301, remote_session_id: 201, local_30: '40.10.1.2/30', gw_30: '40.10.1.1', pool: '10.18.1.2-10.18.1.200', subnet: '10.18.1.0/24' },
+    { checked: false, code: 'usa', flag: '🇺🇸', label: 'آمریکا', port: 6065, proto: 'udp', type: 'l2tp_ether', remote_ip: '', local_ip: '', local_tunnel_id: 32, remote_tunnel_id: 22, local_session_id: 302, remote_session_id: 202, local_30: '40.11.1.2/30', gw_30: '40.11.1.1', pool: '10.17.1.2-10.17.1.200', subnet: '10.17.1.0/24' },
+    { checked: false, code: 'eng', flag: '🇬🇧', label: 'انگلیس', port: 6060, proto: 'tcp', type: 'l2tp_ether', remote_ip: '', local_ip: '', local_tunnel_id: 33, remote_tunnel_id: 23, local_session_id: 303, remote_session_id: 203, local_30: '40.12.1.2/30', gw_30: '40.12.1.1', pool: '10.16.1.2-10.16.1.200', subnet: '10.16.1.0/24' },
+    { checked: false, code: 'nl', flag: '🇳🇱', label: 'هلند', port: 6064, proto: 'udp', type: 'l2tp_ether', remote_ip: '', local_ip: '', local_tunnel_id: 34, remote_tunnel_id: 24, local_session_id: 304, remote_session_id: 204, local_30: '40.13.1.2/30', gw_30: '40.13.1.1', pool: '10.15.1.2-10.15.1.200', subnet: '10.15.1.0/24' },
+    { checked: false, code: 'fin', flag: '🇫🇮', label: 'فنلاند', port: 6059, proto: 'udp', type: 'l2tp_ether', remote_ip: '', local_ip: '', local_tunnel_id: 35, remote_tunnel_id: 25, local_session_id: 305, remote_session_id: 205, local_30: '40.14.1.2/30', gw_30: '40.14.1.1', pool: '10.12.1.2-10.12.1.200', subnet: '10.12.1.0/24' },
+    { checked: false, code: 'pol', flag: '🇵🇱', label: 'لهستان', port: 6063, proto: 'udp', type: 'l2tp_ether', remote_ip: '', local_ip: '', local_tunnel_id: 36, remote_tunnel_id: 26, local_session_id: 306, remote_session_id: 206, local_30: '40.15.1.2/30', gw_30: '40.15.1.1', pool: '10.13.1.2-10.13.1.200', subnet: '10.13.1.0/24' },
+    { checked: false, code: 'ca', flag: '🇨🇦', label: 'کانادا', port: 6067, proto: 'udp', type: 'l2tp_ether', remote_ip: '', local_ip: '', local_tunnel_id: 37, remote_tunnel_id: 27, local_session_id: 307, remote_session_id: 207, local_30: '40.16.1.2/30', gw_30: '40.16.1.1', pool: '10.19.1.2-10.19.1.200', subnet: '10.19.1.0/24' },
+    { checked: false, code: 'trk', flag: '🇹🇷', label: 'ترکیه', port: 6058, proto: 'udp', type: 'l2tp_ether', remote_ip: '', local_ip: '', local_tunnel_id: 38, remote_tunnel_id: 28, local_session_id: 308, remote_session_id: 208, local_30: '40.17.1.2/30', gw_30: '40.17.1.1', pool: '10.11.1.2-10.11.1.200', subnet: '10.11.1.0/24' }
 ];
 
 // Open Wizard Modal
@@ -432,6 +437,11 @@ function setCountryTunnelType(idx, tunType) {
     if (badge && !customizableCountriesList[idx].assigned_tunnel) {
         badge.innerText = `تونل جدید (${tunType === 'l2tp_ether' ? 'L2TP-ETHER' : 'GRE'})`;
     }
+    const l2tpBox = document.getElementById(`c_l2tp_box_${idx}`);
+    const greBox = document.getElementById(`c_gre_box_${idx}`);
+    const isAssigned = !!customizableCountriesList[idx].assigned_tunnel;
+    if (l2tpBox) l2tpBox.style.display = (!isAssigned && tunType === 'l2tp_ether') ? 'block' : 'none';
+    if (greBox) greBox.style.display = (!isAssigned && tunType === 'gre') ? 'block' : 'none';
 }
 
 function setAllCountriesTunnelType(tunType) {
@@ -471,6 +481,9 @@ function renderCustomizableCountryRows() {
             ? `<span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 8px; border-radius: 6px; font-weight: 600; font-size: 0.72rem;">متصل به تونل: <code>${item.assigned_tunnel}</code></span>`
             : `<span class="tag-pill" id="c_badge_${idx}" style="font-size: 0.72rem;">تونل جدید (${item.type === 'l2tp_ether' ? 'L2TP-ETHER' : 'GRE'})</span>`;
 
+        const defaultHost = (document.getElementById('wiz_host') ? document.getElementById('wiz_host').value.trim() : '51.195.227.249');
+        const isAssigned = !!item.assigned_tunnel;
+
         card.innerHTML = `
             <div class="country-card-header">
                 <div class="country-flag-title">
@@ -498,8 +511,8 @@ function renderCustomizableCountryRows() {
             <div style="margin-top: 6px;">
                 <label style="font-size: 0.74rem; color: var(--text-muted); display: block; margin-bottom: 2px;">مدل ساخت تونل جدید:</label>
                 <div class="segmented-control" style="width: 100%;">
-                    <button type="button" class="segmented-btn ${item.type === 'gre' ? 'active' : ''}" id="btn_tun_gre_${idx}" onclick="setCountryTunnelType(${idx}, 'gre')">GRE Tunnel</button>
                     <button type="button" class="segmented-btn ${item.type === 'l2tp_ether' ? 'active' : ''}" id="btn_tun_l2tp_${idx}" onclick="setCountryTunnelType(${idx}, 'l2tp_ether')">L2TPv3 Ethernet</button>
+                    <button type="button" class="segmented-btn ${item.type === 'gre' ? 'active' : ''}" id="btn_tun_gre_${idx}" onclick="setCountryTunnelType(${idx}, 'gre')">GRE Tunnel</button>
                 </div>
             </div>
 
@@ -518,8 +531,69 @@ function renderCustomizableCountryRows() {
             </div>
 
             <div style="margin-top: 6px;">
-                <label style="font-size: 0.74rem; color: var(--text-muted); display: block; margin-bottom: 2px;">آی‌پی سرور خارج (مقصد تونل)</label>
-                <input type="text" id="c_remote_${idx}" placeholder="آی‌پی سرور خارج شما (مثال: 185.x.x.x)" value="${item.remote_ip || ''}" style="font-family: var(--font-mono); font-size: 0.82rem; width: 100%; padding: 5px 8px;" onchange="customizableCountriesList[${idx}].remote_ip = this.value.trim()">
+                <label style="font-size: 0.74rem; color: var(--text-muted); display: block; margin-bottom: 2px;">آی‌پی سرور خارج (Connect-To / Remote IP)</label>
+                <input type="text" id="c_remote_${idx}" placeholder="آی‌پی سرور خارج شما (مثال: 91.99.129.82)" value="${item.remote_ip || ''}" style="font-family: var(--font-mono); font-size: 0.82rem; width: 100%; padding: 5px 8px;" onchange="customizableCountriesList[${idx}].remote_ip = this.value.trim()">
+            </div>
+
+            <!-- Dynamic L2TPv3 Settings Panel -->
+            <div id="c_l2tp_box_${idx}" style="display: ${(!isAssigned && item.type === 'l2tp_ether') ? 'block' : 'none'}; margin-top: 8px; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="font-size: 0.76rem; font-weight: 700; color: var(--accent-cyan, #38bdf8);">⚡ تنظیمات اختصاصی L2TPv3 Ethernet</span>
+                    <span style="font-size: 0.68rem; color: var(--text-dim); font-family: var(--font-mono);">Unmanaged UDP</span>
+                </div>
+                
+                <div style="margin-bottom: 6px;">
+                    <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 2px;">آی‌پی سرور ایران (Local Address):</label>
+                    <input type="text" id="c_l2tp_loc_ip_${idx}" value="${item.local_ip || defaultHost}" placeholder="مثال: ${defaultHost}" style="font-family: var(--font-mono); font-size: 0.8rem; width: 100%; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff;" onchange="customizableCountriesList[${idx}].local_ip = this.value.trim()">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px;">
+                    <div>
+                        <label style="font-size: 0.68rem; color: var(--text-muted); display: block; margin-bottom: 2px;">Local Tunnel ID</label>
+                        <input type="number" id="c_l2tp_ltid_${idx}" value="${item.local_tunnel_id || (30 + idx)}" style="font-family: var(--font-mono); font-size: 0.8rem; width: 100%; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff;" onchange="customizableCountriesList[${idx}].local_tunnel_id = parseInt(this.value)">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.68rem; color: var(--text-muted); display: block; margin-bottom: 2px;">Remote Tunnel ID</label>
+                        <input type="number" id="c_l2tp_rtid_${idx}" value="${item.remote_tunnel_id || (20 + idx)}" style="font-family: var(--font-mono); font-size: 0.8rem; width: 100%; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff;" onchange="customizableCountriesList[${idx}].remote_tunnel_id = parseInt(this.value)">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px;">
+                    <div>
+                        <label style="font-size: 0.68rem; color: var(--text-muted); display: block; margin-bottom: 2px;">Local Session ID</label>
+                        <input type="number" id="c_l2tp_lsid_${idx}" value="${item.local_session_id || (300 + idx)}" style="font-family: var(--font-mono); font-size: 0.8rem; width: 100%; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff;" onchange="customizableCountriesList[${idx}].local_session_id = parseInt(this.value)">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.68rem; color: var(--text-muted); display: block; margin-bottom: 2px;">Remote Session ID</label>
+                        <input type="number" id="c_l2tp_rsid_${idx}" value="${item.remote_session_id || (200 + idx)}" style="font-family: var(--font-mono); font-size: 0.8rem; width: 100%; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff;" onchange="customizableCountriesList[${idx}].remote_session_id = parseInt(this.value)">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                    <div>
+                        <label style="font-size: 0.68rem; color: var(--text-muted); display: block; margin-bottom: 2px;">IP میکروتیک (/30)</label>
+                        <input type="text" id="c_l2tp_loc30_${idx}" value="${item.local_30 || `40.${idx+10}.1.2/30`}" style="font-family: var(--font-mono); font-size: 0.78rem; width: 100%; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff;" onchange="customizableCountriesList[${idx}].local_30 = this.value.trim()">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.68rem; color: var(--text-muted); display: block; margin-bottom: 2px;">Gateway ریموت (/30)</label>
+                        <input type="text" id="c_l2tp_gw30_${idx}" value="${item.gw_30 || `40.${idx+10}.1.1`}" style="font-family: var(--font-mono); font-size: 0.78rem; width: 100%; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff;" onchange="customizableCountriesList[${idx}].gw_30 = this.value.trim()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic GRE Settings Panel -->
+            <div id="c_gre_box_${idx}" style="display: ${(!isAssigned && item.type === 'gre') ? 'block' : 'none'}; margin-top: 8px; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;">
+                <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">⚙️ رنج داخلی تونل GRE (/30)</span>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                    <div>
+                        <label style="font-size: 0.68rem; color: var(--text-muted); display: block; margin-bottom: 2px;">IP میکروتیک (/30)</label>
+                        <input type="text" id="c_gre_loc30_${idx}" value="${item.local_30 || `10.${idx+10}.1.1/30`}" style="font-family: var(--font-mono); font-size: 0.78rem; width: 100%; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff;" onchange="customizableCountriesList[${idx}].local_30 = this.value.trim()">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.68rem; color: var(--text-muted); display: block; margin-bottom: 2px;">Gateway ریموت (/30)</label>
+                        <input type="text" id="c_gre_gw30_${idx}" value="${item.gw_30 || `10.${idx+10}.1.2`}" style="font-family: var(--font-mono); font-size: 0.78rem; width: 100%; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 4px; color: #fff;" onchange="customizableCountriesList[${idx}].gw_30 = this.value.trim()">
+                    </div>
+                </div>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
@@ -605,19 +679,49 @@ async function executeBatchCustomCountries() {
                 return;
             }
 
+            let localTunnelId = item.local_tunnel_id || (30 + idx);
+            let remoteTunnelId = item.remote_tunnel_id || (20 + idx);
+            let localSessionId = item.local_session_id || (300 + idx);
+            let remoteSessionId = item.remote_session_id || (200 + idx);
+            let localIranIp = (document.getElementById('wiz_host') ? document.getElementById('wiz_host').value.trim() : '');
+            let tunnelLocalIp = item.local_30 || `40.${idx+10}.1.2/30`;
+            let tunnelRemoteIp = item.gw_30 || `40.${idx+10}.1.1`;
+
+            if (item.type === 'l2tp_ether') {
+                const ltidInput = document.getElementById(`c_l2tp_ltid_${idx}`);
+                if (ltidInput && ltidInput.value) localTunnelId = parseInt(ltidInput.value);
+                const rtidInput = document.getElementById(`c_l2tp_rtid_${idx}`);
+                if (rtidInput && rtidInput.value) remoteTunnelId = parseInt(rtidInput.value);
+                const lsidInput = document.getElementById(`c_l2tp_lsid_${idx}`);
+                if (lsidInput && lsidInput.value) localSessionId = parseInt(lsidInput.value);
+                const rsidInput = document.getElementById(`c_l2tp_rsid_${idx}`);
+                if (rsidInput && rsidInput.value) remoteSessionId = parseInt(rsidInput.value);
+                const locIpInput = document.getElementById(`c_l2tp_loc_ip_${idx}`);
+                if (locIpInput && locIpInput.value.trim()) localIranIp = locIpInput.value.trim();
+                const loc30Input = document.getElementById(`c_l2tp_loc30_${idx}`);
+                if (loc30Input && loc30Input.value.trim()) tunnelLocalIp = loc30Input.value.trim();
+                const gw30Input = document.getElementById(`c_l2tp_gw30_${idx}`);
+                if (gw30Input && gw30Input.value.trim()) tunnelRemoteIp = gw30Input.value.trim();
+            } else {
+                const loc30Input = document.getElementById(`c_gre_loc30_${idx}`);
+                if (loc30Input && loc30Input.value.trim()) tunnelLocalIp = loc30Input.value.trim();
+                const gw30Input = document.getElementById(`c_gre_gw30_${idx}`);
+                if (gw30Input && gw30Input.value.trim()) tunnelRemoteIp = gw30Input.value.trim();
+            }
+
             selectedDests.push({
                 name: item.code.toLowerCase(),
                 country_label: item.label,
                 tunnel_type: item.type,
                 existing_tunnel_name: item.assigned_tunnel || null,
                 remote_ip: remoteIp,
-                local_ip: (document.getElementById('wiz_host') ? document.getElementById('wiz_host').value.trim() : ''),
-                tunnel_local_ip: item.local_30 || `40.${idx+10}.1.2/30`,
-                tunnel_remote_ip: item.gw_30 || `40.${idx+10}.1.1`,
-                local_tunnel_id: 30 + idx,
-                remote_tunnel_id: 20 + idx,
-                local_session_id: 300 + idx,
-                remote_session_id: 200 + idx,
+                local_ip: localIranIp,
+                tunnel_local_ip: tunnelLocalIp,
+                tunnel_remote_ip: tunnelRemoteIp,
+                local_tunnel_id: localTunnelId,
+                remote_tunnel_id: remoteTunnelId,
+                local_session_id: localSessionId,
+                remote_session_id: remoteSessionId,
                 ovpn_port: port,
                 ovpn_protocol: item.proto,
                 ovpn_certificate: (document.getElementById('wiz_existing_cert_select') && document.getElementById('wiz_existing_cert_select').value) ? document.getElementById('wiz_existing_cert_select').value : 'ov',

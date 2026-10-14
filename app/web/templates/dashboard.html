@@ -202,10 +202,33 @@
                 </div>
                 <div class="form-group">
                     <label>نوع تونل</label>
-                    <select id="dst_tunnel_type">
-                        <option value="gre" selected>GRE Tunnel</option>
-                        <option value="l2tp_ether">L2TP Ethernet (Pseudowire)</option>
+                    <select id="dst_tunnel_type" onchange="const f = document.getElementById('dst_l2tp_fields'); if(f) f.style.display = (this.value === 'l2tp_ether') ? 'block' : 'none';">
+                        <option value="l2tp_ether" selected>L2TP Ethernet (Pseudowire)</option>
+                        <option value="gre">GRE Tunnel</option>
                     </select>
+                </div>
+                <div id="dst_l2tp_fields" style="display: block; grid-column: span 2; background: rgba(30, 41, 59, 0.4); padding: 10px; border-radius: 8px; border: 1px dashed rgba(56, 189, 248, 0.3); margin-top: 4px;">
+                    <strong style="font-size: 0.8rem; color: var(--accent-cyan); display: block; margin-bottom: 6px;">⚙️ پارامترهای اختصاصی L2TPv3 Ethernet</strong>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div>
+                            <label style="font-size: 0.72rem; color: var(--text-muted);">IP سرور ایران (Local Address)</label>
+                            <input type="text" id="dst_l2tp_local_ip" placeholder="مثال: 51.195.227.249">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.72rem; color: var(--text-muted);">Local / Remote Tunnel ID</label>
+                            <div style="display: flex; gap: 4px;">
+                                <input type="number" id="dst_local_tunnel_id" value="33" placeholder="Local: 33">
+                                <input type="number" id="dst_remote_tunnel_id" value="22" placeholder="Remote: 22">
+                            </div>
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <label style="font-size: 0.72rem; color: var(--text-muted);">Local / Remote Session ID</label>
+                            <div style="display: flex; gap: 4px;">
+                                <input type="number" id="dst_local_session_id" value="333" placeholder="Local: 333">
+                                <input type="number" id="dst_remote_session_id" value="222" placeholder="Remote: 222">
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>IP میکروتیک روی تونل (/30)</label>
