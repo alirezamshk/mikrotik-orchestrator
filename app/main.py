@@ -324,7 +324,11 @@ async def wizard_step3_services(req: Step3ServicesRequest):
         f"/ip pool add name=IKEV2 ranges={req.ikev2_pool}",
         f"/ip ipsec mode-config add name=ikev2 address-pool=IKEV2 address-prefix-length=32 static-dns=8.8.8.8,8.8.4.4",
         f"/ip ipsec identity add auth-method=eap-radius certificate={req.cert_name} mode-config=ikev2 generate-policy=port-strict",
-        "/ip firewall mangle add chain=forward action=change-mss new-mss=clamp-to-pmtu protocol=tcp tcp-flags=syn comment=\"auto:clamp-mss\""
+        "/ip firewall mangle add chain=forward action=change-mss new-mss=clamp-to-pmtu protocol=tcp tcp-flags=syn comment=\"auto:clamp-mss\"",
+        "# --- تنظیمات Source NAT استاندارد (WAN ایران + اینترفیس لیست TUNNELS) ---",
+        ":if ([:len [/interface list find where name=TUNNELS]] = 0) do={ /interface list add name=TUNNELS comment=\"auto:exit-tunnels\" }",
+        ":if ([:len [/ip firewall nat find where action=masquerade out-interface=ether1]] = 0) do={ /ip firewall nat add chain=srcnat action=masquerade out-interface=ether1 comment=\"auto:masq-wan-iran\" place-before=0 }",
+        ":if ([:len [/ip firewall nat find where action=masquerade out-interface-list=TUNNELS]] = 0) do={ /ip firewall nat add chain=srcnat action=masquerade out-interface-list=TUNNELS comment=\"auto:masq-tunnels\" place-before=0 }"
     ]
     if req.enable_iran_fetch:
         commands.extend([
@@ -425,6 +429,7 @@ async def wizard_adopt_existing_tunnel(req: AdoptTunnelRequest):
 
     commands = [
         f"# --- همگام‌سازی تونل موجود {req.tunnel_name} برای کشور {req.country_label} ---",
+        f"/interface list member add list=TUNNELS interface={req.tunnel_name} comment='auto:tun-{req.country_code}'",
         f"/routing table add name={table_name} fib=yes",
         f"/ip route add dst-address=0.0.0.0/0 gateway={req.tunnel_remote_ip} routing-table={table_name} distance=1 comment='auto:{req.country_code.upper()}'",
         f"/ip route add dst-address=0.0.0.0/0 blackhole=yes distance=10 routing-table={table_name} comment='auto:killswitch-{req.country_code}'",
@@ -459,6 +464,7 @@ async def wizard_adopt_all_tunnels(req: AdoptAllTunnelsRequest):
 
         all_cmds.extend([
             f"# --- همگام‌سازی تونل موجود {t.tunnel_name} ({t.country_label}) ---",
+            f"/interface list member add list=TUNNELS interface={t.tunnel_name} comment='auto:tun-{t.country_code}'",
             f"/routing table add name={table_name} fib=yes",
             f"/ip route add dst-address=0.0.0.0/0 gateway={t.tunnel_remote_ip} routing-table={table_name} distance=1 comment='auto:{t.country_code.upper()}'",
             f"/ip route add dst-address=0.0.0.0/0 blackhole=yes distance=10 routing-table={table_name} comment='auto:killswitch-{t.country_code}'",

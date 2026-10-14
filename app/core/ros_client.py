@@ -148,6 +148,7 @@ class RouterOSClient:
         generated_commands = [
             tunnel_cmd,
             f"/ip address add address={dest.tunnel_local_ip} interface={tun_iface} comment='auto:{dest.name}-gre'",
+            f"/interface list member add list=TUNNELS interface={tun_iface} comment='auto:tun-{dest.name}'",
             f"/routing table add name={table_name} fib=yes",
             f"/ip route add dst-address=0.0.0.0/0 gateway={dest.tunnel_remote_ip} routing-table={table_name} distance=1 comment='auto:{dest.name.upper()}'",
             f"/ip route add dst-address=0.0.0.0/0 blackhole=yes distance=10 routing-table={table_name} comment='auto:killswitch-{dest.name}'",
