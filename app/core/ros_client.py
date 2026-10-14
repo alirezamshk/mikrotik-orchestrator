@@ -250,8 +250,26 @@ class RouterOSClient:
             ]
         elif dest.tunnel_type == "l2tp_ether":
             tun_iface = f"l2tp-{dest.name}"
-            loc_clause = f" local-address={dest.local_ip}" if dest.local_ip else ""
-            tunnel_cmd = f"/interface l2tp-ether add name={tun_iface} connect-to={dest.remote_ip}{loc_clause} l2tp-proto-version=l2tpv3-udp unmanaged-mode=yes local-tunnel-id={dest.local_tunnel_id or 33} remote-tunnel-id={dest.remote_tunnel_id or 22} local-session-id={dest.local_session_id or 333} remote-session-id={dest.remote_session_id or 222} use-ipsec=no"
+            # RouterOS unmanaged l2tp-ether requires both connect-to and local-address
+            loc_ip = dest.local_ip
+            if not loc_ip:
+                clean_host = self.host.strip()
+                if clean_host.replace(".", "").isdigit():
+                    loc_ip = clean_host
+                elif not self.is_mock and self._api:
+                    try:
+                        ips = self._api.get_resource("/ip/address").get()
+                        for ip_item in ips:
+                            addr = ip_item.get("address", "").split("/")[0]
+                            if addr and not addr.startswith("10.") and not addr.startswith("172.") and not addr.startswith("192.168."):
+                                loc_ip = addr
+                                break
+                    except Exception:
+                        pass
+            if not loc_ip:
+                loc_ip = self.host
+
+            tunnel_cmd = f"/interface l2tp-ether add name={tun_iface} connect-to={dest.remote_ip} local-address={loc_ip} l2tp-proto-version=l2tpv3-udp unmanaged-mode=yes local-tunnel-id={dest.local_tunnel_id or 33} remote-tunnel-id={dest.remote_tunnel_id or 22} local-session-id={dest.local_session_id or 333} remote-session-id={dest.remote_session_id or 222} use-ipsec=no"
             generated_commands = [
                 tunnel_cmd,
                 f"/ip address add address={dest.tunnel_local_ip} interface={tun_iface} comment=\"auto:{dest.name}-gre\""

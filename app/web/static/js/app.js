@@ -611,6 +611,7 @@ async function executeBatchCustomCountries() {
                 tunnel_type: item.type,
                 existing_tunnel_name: item.assigned_tunnel || null,
                 remote_ip: remoteIp,
+                local_ip: (document.getElementById('wiz_host') ? document.getElementById('wiz_host').value.trim() : ''),
                 tunnel_local_ip: item.local_30 || `40.${idx+10}.1.2/30`,
                 tunnel_remote_ip: item.gw_30 || `40.${idx+10}.1.1`,
                 local_tunnel_id: 30 + idx,
