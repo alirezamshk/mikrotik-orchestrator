@@ -420,6 +420,33 @@ function onCountryTunnelSelect(idx, tunnelName) {
     }
 }
 
+function setCountryTunnelType(idx, tunType) {
+    customizableCountriesList[idx].type = tunType;
+    const btnGre = document.getElementById(`btn_tun_gre_${idx}`);
+    const btnL2tp = document.getElementById(`btn_tun_l2tp_${idx}`);
+    if (btnGre && btnL2tp) {
+        btnGre.classList.toggle('active', tunType === 'gre');
+        btnL2tp.classList.toggle('active', tunType === 'l2tp_ether');
+    }
+    const badge = document.getElementById(`c_badge_${idx}`);
+    if (badge && !customizableCountriesList[idx].assigned_tunnel) {
+        badge.innerText = `تونل جدید (${tunType === 'l2tp_ether' ? 'L2TP-ETHER' : 'GRE'})`;
+    }
+}
+
+function setAllCountriesTunnelType(tunType) {
+    customizableCountriesList.forEach((c, idx) => {
+        c.type = tunType;
+    });
+    renderCustomizableCountryRows();
+    const btnGre = document.getElementById('btn_global_tun_gre');
+    const btnL2tp = document.getElementById('btn_global_tun_l2tp');
+    if (btnGre && btnL2tp) {
+        btnGre.classList.toggle('active', tunType === 'gre');
+        btnL2tp.classList.toggle('active', tunType === 'l2tp_ether');
+    }
+}
+
 function renderCustomizableCountryRows() {
     const container = document.getElementById('countryCustomList');
     if (!container) return;
@@ -442,7 +469,7 @@ function renderCustomizableCountryRows() {
 
         const assignedBadge = item.assigned_tunnel 
             ? `<span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 8px; border-radius: 6px; font-weight: 600; font-size: 0.72rem;">متصل به تونل: <code>${item.assigned_tunnel}</code></span>`
-            : `<span class="tag-pill" style="font-size: 0.72rem;">تونل جدید (${item.type.toUpperCase()})</span>`;
+            : `<span class="tag-pill" id="c_badge_${idx}" style="font-size: 0.72rem;">تونل جدید (${item.type === 'l2tp_ether' ? 'L2TP-ETHER' : 'GRE'})</span>`;
 
         card.innerHTML = `
             <div class="country-card-header">
@@ -465,6 +492,15 @@ function renderCustomizableCountryRows() {
                 <select id="c_tun_select_${idx}" style="font-size: 0.8rem; width: 100%; padding: 5px 8px; font-family: var(--font-mono); border-radius: 6px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color);" onchange="onCountryTunnelSelect(${idx}, this.value)">
                     ${tunnelOptions}
                 </select>
+            </div>
+
+            <!-- Tunnel Model Selector (GRE vs L2TP-Ethernet) for New Tunnels -->
+            <div style="margin-top: 6px;">
+                <label style="font-size: 0.74rem; color: var(--text-muted); display: block; margin-bottom: 2px;">مدل ساخت تونل جدید:</label>
+                <div class="segmented-control" style="width: 100%;">
+                    <button type="button" class="segmented-btn ${item.type === 'gre' ? 'active' : ''}" id="btn_tun_gre_${idx}" onclick="setCountryTunnelType(${idx}, 'gre')">GRE Tunnel</button>
+                    <button type="button" class="segmented-btn ${item.type === 'l2tp_ether' ? 'active' : ''}" id="btn_tun_l2tp_${idx}" onclick="setCountryTunnelType(${idx}, 'l2tp_ether')">L2TPv3 Ethernet</button>
+                </div>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
@@ -577,6 +613,10 @@ async function executeBatchCustomCountries() {
                 remote_ip: remoteIp,
                 tunnel_local_ip: item.local_30 || `40.${idx+10}.1.2/30`,
                 tunnel_remote_ip: item.gw_30 || `40.${idx+10}.1.1`,
+                local_tunnel_id: 30 + idx,
+                remote_tunnel_id: 20 + idx,
+                local_session_id: 300 + idx,
+                remote_session_id: 200 + idx,
                 ovpn_port: port,
                 ovpn_protocol: item.proto,
                 ovpn_certificate: 'server-template',

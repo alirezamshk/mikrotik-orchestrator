@@ -642,9 +642,13 @@
                             کشورهای مورد نظرتان را تیک بزنید. می‌توانید <strong>شماره پورت</strong> و <strong>پروتکل (UDP یا TCP)</strong> را آزادانه تغییر دهید:
                         </p>
                     </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button type="button" class="btn btn-secondary" style="font-size: 0.82rem; padding: 6px 12px;" onclick="toggleAllCountries(true)">تیک زدن همه</button>
-                        <button type="button" class="btn btn-secondary" style="font-size: 0.82rem; padding: 6px 12px;" onclick="addCustomCountryRow()">➕ افزودن کشور دلخواه</button>
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <div class="segmented-control" style="width: 230px;">
+                            <button type="button" class="segmented-btn active" id="btn_global_tun_gre" onclick="setAllCountriesTunnelType('gre')">همه: GRE</button>
+                            <button type="button" class="segmented-btn" id="btn_global_tun_l2tp" onclick="setAllCountriesTunnelType('l2tp_ether')">همه: L2TP-Ether</button>
+                        </div>
+                        <button type="button" class="btn btn-secondary" style="font-size: 0.82rem; padding: 6px 12px;" onclick="toggleAllCountries(true)">تیک همه</button>
+                        <button type="button" class="btn btn-secondary" style="font-size: 0.82rem; padding: 6px 12px;" onclick="addCustomCountryRow()">➕ افزودن کشور</button>
                     </div>
                 </div>
 
