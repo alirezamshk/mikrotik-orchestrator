@@ -619,7 +619,7 @@ async function executeBatchCustomCountries() {
                 remote_session_id: 200 + idx,
                 ovpn_port: port,
                 ovpn_protocol: item.proto,
-                ovpn_certificate: 'server-template',
+                ovpn_certificate: (document.getElementById('wiz_existing_cert_select') && document.getElementById('wiz_existing_cert_select').value) ? document.getElementById('wiz_existing_cert_select').value : 'ov',
                 client_pool_range: item.pool || `10.${idx+20}.1.2-10.${idx+20}.1.200`,
                 client_gateway_ip: item.gw_30 ? item.pool.split('-')[0].replace(/\.[0-9]+$/, '.1') : `10.${idx+20}.1.1`,
                 client_subnet: item.subnet || `10.${idx+20}.1.0/24`,
@@ -1035,7 +1035,8 @@ async function adoptSingleTunnel(idx, tunName, tunType, defaultGw) {
         client_gateway_ip: document.getElementById('ad_pool_' + idx).value.split('-')[0].replace(/\.[0-9]+$/, '.1'),
         client_subnet: document.getElementById('ad_sub_' + idx).value.trim(),
         ovpn_port: parseInt(document.getElementById('ad_port_' + idx).value),
-        ovpn_protocol: document.getElementById('ad_proto_' + idx).value
+        ovpn_protocol: document.getElementById('ad_proto_' + idx).value,
+        certificate: (document.getElementById('wiz_existing_cert_select') && document.getElementById('wiz_existing_cert_select').value) ? document.getElementById('wiz_existing_cert_select').value : 'ov'
     };
 
     try {
@@ -1085,7 +1086,8 @@ async function adoptAllDetectedTunnels() {
             client_gateway_ip: pool.split('-')[0].replace(/\.[0-9]+$/, '.1'),
             client_subnet: sub,
             ovpn_port: port,
-            ovpn_protocol: proto
+            ovpn_protocol: proto,
+            certificate: (document.getElementById('wiz_existing_cert_select') && document.getElementById('wiz_existing_cert_select').value) ? document.getElementById('wiz_existing_cert_select').value : 'ov'
         });
     });
 

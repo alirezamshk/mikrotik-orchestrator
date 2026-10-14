@@ -444,6 +444,7 @@ class AdoptTunnelRequest(BaseModel):
     client_subnet: str
     ovpn_port: int
     ovpn_protocol: str = "udp"
+    certificate: Optional[str] = "ov"
 
 @app.post("/api/wizard/adopt-tunnel")
 async def wizard_adopt_existing_tunnel(req: AdoptTunnelRequest):
@@ -456,16 +457,17 @@ async def wizard_adopt_existing_tunnel(req: AdoptTunnelRequest):
     profile_name = f"ovpn-{req.country_code}"
     ovpn_server_name = f"ovpn-{req.country_code}"
 
+    cert_to_use = req.certificate or "ov"
     commands = [
         f"# --- همگام‌سازی تونل موجود {req.tunnel_name} برای کشور {req.country_label} ---",
-        f"/interface list member add list=TUNNELS interface={req.tunnel_name} comment='auto:tun-{req.country_code}'",
-        f"/routing table add name={table_name} fib=yes",
-        f"/ip route add dst-address=0.0.0.0/0 gateway={req.tunnel_remote_ip} routing-table={table_name} distance=1 comment='auto:{req.country_code.upper()}'",
-        f"/ip route add dst-address=0.0.0.0/0 blackhole=yes distance=10 routing-table={table_name} comment='auto:killswitch-{req.country_code}'",
+        f"/interface list member add list=TUNNELS interface={req.tunnel_name} comment=\"auto:tun-{req.country_code}\"",
+        f"/routing table add name={table_name} fib",
+        f"/ip route add dst-address=0.0.0.0/0 gateway={req.tunnel_remote_ip} routing-table={table_name} distance=1 comment=\"auto:{req.country_code.upper()}\"",
+        f"/ip route add blackhole dst-address=0.0.0.0/0 distance=10 routing-table={table_name} comment=\"auto:killswitch-{req.country_code}\"",
         f"/ip pool add name={pool_name} ranges={req.client_pool_range}",
         f"/ppp profile add name={profile_name} local-address={req.client_gateway_ip} remote-address={pool_name} dns-server=8.8.8.8,8.8.4.4 change-tcp-mss=yes use-encryption=required",
-        f"/interface ovpn-server server add name={ovpn_server_name} port={req.ovpn_port} protocol={req.ovpn_protocol} default-profile={profile_name} certificate=server-template cipher=aes128-gcm,aes256-gcm redirect-gateway=def1 disabled=no",
-        f"/ip firewall mangle add chain=prerouting action=mark-routing new-routing-mark={table_name} src-address={req.client_subnet} dst-address-list=!IRAN comment='auto:route-{req.country_code}'"
+        f"/interface ovpn-server server add name={ovpn_server_name} port={req.ovpn_port} protocol={req.ovpn_protocol} default-profile={profile_name} certificate=\"{cert_to_use}\" cipher=aes128-gcm,aes256-gcm redirect-gateway=def1 disabled=no",
+        f"/ip firewall mangle add chain=prerouting action=mark-routing new-routing-mark={table_name} src-address={req.client_subnet} dst-address-list=!IRAN comment=\"auto:route-{req.country_code}\""
     ]
 
     with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:
@@ -494,16 +496,17 @@ async def wizard_adopt_all_tunnels(req: AdoptAllTunnelsRequest):
         profile_name = f"ovpn-{t.country_code}"
         ovpn_server_name = f"ovpn-{t.country_code}"
 
+        cert_to_use = t.certificate or "ov"
         all_cmds.extend([
             f"# --- همگام‌سازی تونل موجود {t.tunnel_name} ({t.country_label}) ---",
-            f"/interface list member add list=TUNNELS interface={t.tunnel_name} comment='auto:tun-{t.country_code}'",
-            f"/routing table add name={table_name} fib=yes",
-            f"/ip route add dst-address=0.0.0.0/0 gateway={t.tunnel_remote_ip} routing-table={table_name} distance=1 comment='auto:{t.country_code.upper()}'",
-            f"/ip route add dst-address=0.0.0.0/0 blackhole=yes distance=10 routing-table={table_name} comment='auto:killswitch-{t.country_code}'",
+            f"/interface list member add list=TUNNELS interface={t.tunnel_name} comment=\"auto:tun-{t.country_code}\"",
+            f"/routing table add name={table_name} fib",
+            f"/ip route add dst-address=0.0.0.0/0 gateway={t.tunnel_remote_ip} routing-table={table_name} distance=1 comment=\"auto:{t.country_code.upper()}\"",
+            f"/ip route add blackhole dst-address=0.0.0.0/0 distance=10 routing-table={table_name} comment=\"auto:killswitch-{t.country_code}\"",
             f"/ip pool add name={pool_name} ranges={t.client_pool_range}",
             f"/ppp profile add name={profile_name} local-address={t.client_gateway_ip} remote-address={pool_name} dns-server=8.8.8.8,8.8.4.4 change-tcp-mss=yes use-encryption=required",
-            f"/interface ovpn-server server add name={ovpn_server_name} port={t.ovpn_port} protocol={req.ovpn_protocol} default-profile={profile_name} certificate=server-template cipher=aes128-gcm,aes256-gcm redirect-gateway=def1 disabled=no",
-            f"/ip firewall mangle add chain=prerouting action=mark-routing new-routing-mark={table_name} src-address={t.client_subnet} dst-address-list=!IRAN comment='auto:route-{t.country_code}'"
+            f"/interface ovpn-server server add name={ovpn_server_name} port={t.ovpn_port} protocol={t.ovpn_protocol} default-profile={profile_name} certificate=\"{cert_to_use}\" cipher=aes128-gcm,aes256-gcm redirect-gateway=def1 disabled=no",
+            f"/ip firewall mangle add chain=prerouting action=mark-routing new-routing-mark={table_name} src-address={t.client_subnet} dst-address-list=!IRAN comment=\"auto:route-{t.country_code}\""
         ])
 
     with RouterOSClient(server.host, server.username, server.password, server.api_port, server.use_ssl, server_id=server.id) as client:

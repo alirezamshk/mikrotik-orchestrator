@@ -101,16 +101,30 @@ class RouterOSClient:
         for c in commands:
             line = c.strip()
             if line and not line.startswith("#"):
+                # Normalize single quotes to double quotes for RouterOS script parser
+                line = line.replace("'", "\"")
+                line = line.replace("blackhole=yes", "blackhole")
                 clean_lines.append(line)
 
         if not clean_lines:
             return {"status": "success_live", "commands": []}
 
-        script_content = "\r\n".join(clean_lines)
-        script_name = f"orch-{uuid.uuid4().hex[:6]}"
-
         if not self._api:
             self.connect()
+
+        # Build resilient script: ensure TUNNELS list exists, then wrap each command in safe :do { } on-error={ }
+        script_body = [
+            ':if ([:len [/interface list find where name="TUNNELS"]] = 0) do={ :do { /interface list add name="TUNNELS" comment="auto:exit-tunnels" } on-error={} }'
+        ]
+        for cmd in clean_lines:
+            if cmd.startswith(":"):
+                script_body.append(cmd)
+            else:
+                escaped_desc = cmd[:50].replace("\"", "").replace("\\", "")
+                script_body.append(f':do {{ {cmd} }} on-error={{ :log warning ("orch-err: " . "{escaped_desc}") }}')
+
+        script_content = "\r\n".join(script_body)
+        script_name = f"orch-{uuid.uuid4().hex[:6]}"
 
         try:
             script_res = self._api.get_resource("/system/script")
@@ -122,7 +136,11 @@ class RouterOSClient:
             try:
                 script_res.call("run", {"number": script_name})
             except Exception as run_err:
-                logger.warning(f"Script run call notice: {run_err}")
+                logger.error(f"RouterOS script run call error: {run_err}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"خطا در اجرای اسکریپت روی روتر ({self.host}): {str(run_err)}"
+                )
 
             time.sleep(1.0)
 
@@ -135,6 +153,8 @@ class RouterOSClient:
                 pass
 
             return {"status": "success_live", "commands": clean_lines}
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Error executing script on RouterOS {self.host}: {e}")
             raise HTTPException(
@@ -205,6 +225,24 @@ class RouterOSClient:
         profile_name = dest.get_profile_name()
         ovpn_server_name = dest.get_ovpn_server_name()
 
+        # Dynamic certificate selection: resolve to active certificate on router
+        cert_name = dest.ovpn_certificate
+        if not self.is_mock:
+            try:
+                if not self._api:
+                    self.connect()
+                certs = self._api.get_resource("/certificate").get()
+                cert_names = [c.get("name") for c in certs]
+                if cert_name not in cert_names:
+                    # Pick certificate with private key or first available
+                    priv_certs = [c.get("name") for c in certs if c.get("private-key") == "true"]
+                    if priv_certs:
+                        cert_name = priv_certs[0]
+                    elif cert_names:
+                        cert_name = cert_names[0]
+            except Exception:
+                pass
+
         if dest.existing_tunnel_name:
             tun_iface = dest.existing_tunnel_name
             generated_commands = [
@@ -216,25 +254,25 @@ class RouterOSClient:
             tunnel_cmd = f"/interface l2tp-ether add name={tun_iface} connect-to={dest.remote_ip}{loc_clause} l2tp-proto-version=l2tpv3-udp unmanaged-mode=yes local-tunnel-id={dest.local_tunnel_id or 33} remote-tunnel-id={dest.remote_tunnel_id or 22} local-session-id={dest.local_session_id or 333} remote-session-id={dest.remote_session_id or 222} use-ipsec=no"
             generated_commands = [
                 tunnel_cmd,
-                f"/ip address add address={dest.tunnel_local_ip} interface={tun_iface} comment='auto:{dest.name}-gre'"
+                f"/ip address add address={dest.tunnel_local_ip} interface={tun_iface} comment=\"auto:{dest.name}-gre\""
             ]
         else:
             tun_iface = f"gre-{dest.name}"
             tunnel_cmd = f"/interface gre add name={tun_iface} remote-address={dest.remote_ip}"
             generated_commands = [
                 tunnel_cmd,
-                f"/ip address add address={dest.tunnel_local_ip} interface={tun_iface} comment='auto:{dest.name}-gre'"
+                f"/ip address add address={dest.tunnel_local_ip} interface={tun_iface} comment=\"auto:{dest.name}-gre\""
             ]
 
         generated_commands.extend([
-            f"/interface list member add list=TUNNELS interface={tun_iface} comment='auto:tun-{dest.name}'",
-            f"/routing table add name={table_name} fib=yes",
-            f"/ip route add dst-address=0.0.0.0/0 gateway={dest.tunnel_remote_ip} routing-table={table_name} distance=1 comment='auto:{dest.name.upper()}'",
-            f"/ip route add dst-address=0.0.0.0/0 blackhole=yes distance=10 routing-table={table_name} comment='auto:killswitch-{dest.name}'",
+            f"/interface list member add list=TUNNELS interface={tun_iface} comment=\"auto:tun-{dest.name}\"",
+            f"/routing table add name={table_name} fib",
+            f"/ip route add dst-address=0.0.0.0/0 gateway={dest.tunnel_remote_ip} routing-table={table_name} distance=1 comment=\"auto:{dest.name.upper()}\"",
+            f"/ip route add blackhole dst-address=0.0.0.0/0 distance=10 routing-table={table_name} comment=\"auto:killswitch-{dest.name}\"",
             f"/ip pool add name={pool_name} ranges={dest.client_pool_range}",
             f"/ppp profile add name={profile_name} local-address={dest.client_gateway_ip} remote-address={pool_name} dns-server=8.8.8.8,8.8.4.4 change-tcp-mss=yes use-encryption=required",
-            f"/interface ovpn-server server add name={ovpn_server_name} port={dest.ovpn_port} protocol={dest.ovpn_protocol} default-profile={profile_name} certificate={dest.ovpn_certificate} cipher=aes128-gcm,aes256-gcm redirect-gateway=def1 disabled=no",
-            f"/ip firewall mangle add chain=prerouting action=mark-routing new-routing-mark={table_name} src-address={dest.client_subnet} dst-address-list=!IRAN comment='auto:route-{dest.name}'"
+            f"/interface ovpn-server server add name={ovpn_server_name} port={dest.ovpn_port} protocol={dest.ovpn_protocol} default-profile={profile_name} certificate=\"{cert_name}\" cipher=aes128-gcm,aes256-gcm redirect-gateway=def1 disabled=no",
+            f"/ip firewall mangle add chain=prerouting action=mark-routing new-routing-mark={table_name} src-address={dest.client_subnet} dst-address-list=!IRAN comment=\"auto:route-{dest.name}\""
         ])
 
         if self.is_mock:
@@ -375,9 +413,9 @@ class RouterOSClient:
 
     def generate_self_signed_cert(self, cert_name: str = "server-template", common_name: str = "server-template", days: int = 3650) -> Dict[str, Any]:
         commands = [
-            f"/certificate add name=ca-authority common-name='CA-Authority' days-valid={days} key-size=2048 key-usage=crl-sign,key-cert-sign",
+            f"/certificate add name=ca-authority common-name=\"CA-Authority\" days-valid={days} key-size=2048 key-usage=crl-sign,key-cert-sign",
             f"/certificate sign ca-authority name=ca-authority",
-            f"/certificate add name={cert_name} common-name='{common_name}' days-valid={days} key-size=2048 key-usage=digital-signature,key-encipherment,tls-server",
+            f"/certificate add name={cert_name} common-name=\"{common_name}\" days-valid={days} key-size=2048 key-usage=digital-signature,key-encipherment,tls-server",
             f"/certificate sign {cert_name} ca=ca-authority name={cert_name}"
         ]
         if self.is_mock:
@@ -401,8 +439,8 @@ class RouterOSClient:
         key_file = f"{cert_name}.key"
         commands = [
             f"# 1. Upload files {cert_file} and {key_file} to MikroTik storage",
-            f"/certificate import file-name={cert_file} passphrase=''",
-            f"/certificate import file-name={key_file} passphrase=''",
+            f"/certificate import file-name={cert_file} passphrase=\"\"",
+            f"/certificate import file-name={key_file} passphrase=\"\"",
             f"# 2. Certificate {cert_name} is now imported with private key (K flag)"
         ]
         if self.is_mock:
@@ -463,7 +501,7 @@ class RouterOSClient:
             f"/ip pool remove [find where name=ovpn-{name}]",
             f"/ppp profile remove [find where name=ovpn-{name}]",
             f"/interface ovpn-server server remove [find where name=ovpn-{name}]",
-            f"/ip firewall mangle remove [find where comment='auto:route-{name}']"
+            f"/ip firewall mangle remove [find where comment=\"auto:route-{name}\"]"
         ]
         self.execute_routeros_commands(cmds)
         return {"status": "removed_live", "destination": name}
